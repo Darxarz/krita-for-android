@@ -83,3 +83,15 @@ Krita и в runtime имеет доступ только к стандартно
   с target Android Python, с которым линкуется Krita;
 - упаковать Python standard library и plugin files в APK assets;
 - при запуске Krita Android выставить пути Python через `PyConfig`/`PYTHONHOME`-аналог.
+
+## Текущая стратегия для PyQt5
+
+Полная Android-сборка Qt из `ext_qt` тяжелая для быстрых проверок, поэтому следующий
+proof-layer проверяет сам `ext_pyqt5` отдельно: CI ставит готовый Qt 5.15.2 for Android
+через `aqtinstall`, кладет его в dependency prefix и запускает Android-only рецепт
+`ext_pyqt5` поверх уже собранных `ext_python`, `ext_sip`, `ext_pyqt-builder` и
+`ext_pyqt5-sip`.
+
+Это не заменяет будущую интеграцию с Krita `ext_qt`, но должно быстро показать, какие
+именно ошибки остаются в PyQt/SIP cross-build: qmake mkspec, target Python metadata,
+suffix names, линковка к `libpython3.14.so` или набор необходимых Qt modules.

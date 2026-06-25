@@ -70,6 +70,18 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28192903905
 `PyQt5/sip.cpython-314-<triplet>.so`; workflow проверяет ELF machine type и зависимость
 от `libpython3.14.so`.
 
+Следующий слой: минимальный `ext_pyqt5` для Android. Добавлен patch-кандидат
+`0005-build-minimal-pyqt5-for-android.patch`, который вводит Android-only recipe для
+`ext_pyqt5`: `sip-build` получает target Python 3.14 настройки через `pyproject.toml`,
+использует Android `qmake`, явно включает только `QtCore`, `QtNetwork`, `QtGui` и
+`QtWidgets`, а после установки переименовывает host-style extension suffix в Android
+suffix `cpython-314-<triplet>`.
+
+Добавлен CI probe `Krita deps PyQt5 minimal Android`. Для скорости он подкладывает готовый
+Qt for Android через `aqtinstall`, а затем собирает уже проверенные Python/SIP слои и
+пробует минимальный PyQt5 runtime. Это проверка сборочного рецепта; полноценная интеграция
+с upstream `ext_qt` остается отдельным шагом.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;

@@ -1,0 +1,269 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Fri, 26 Jun 2026 00:00:00 +0000
+Subject: [PATCH] ext_pyqt5: cross-build minimal Android bindings
+
+PyQt5's normal Unix recipe asks sip-build to discover host Python and host Qt.
+For Android that creates the wrong Python ABI metadata and extension suffix,
+and qmake needs to be driven with an Android mkspec/ABI. Add an Android-only
+recipe that feeds sip-build the target Python settings through pyproject.toml,
+uses Android qmake explicitly, and builds the first runtime binding set needed
+by PyKrita experiments.
+---
+ ext_pyqt5/CMakeLists.txt                     | 110 +++++++++++++++++++
+ ext_pyqt5/android/configure_pyproject.cmake  |  50 +++++++++
+ ext_pyqt5/android/rename_pyqt5_modules.cmake |  55 ++++++++++
+ 3 files changed, 215 insertions(+)
+ create mode 100644 ext_pyqt5/android/configure_pyproject.cmake
+ create mode 100644 ext_pyqt5/android/rename_pyqt5_modules.cmake
+
+diff --git a/ext_pyqt5/CMakeLists.txt b/ext_pyqt5/CMakeLists.txt
+index 0000000..0000000 100644
+--- a/ext_pyqt5/CMakeLists.txt
++++ b/ext_pyqt5/CMakeLists.txt
+@@ -6,6 +6,116 @@ project(ext_pyqt5)
+ include(${CMAKE_SOURCE_DIR}/../cmake/base-dep-options.cmake)
+ include(${CMAKE_SOURCE_DIR}/../cmake/krita_initialize_python.cmake)
+ 
++if(ANDROID)
++    set(PYQT5_ANDROID_PYTHON_VERSION "3.14")
++    set(PYQT5_ANDROID_BINDINGS QtCore QtNetwork QtGui QtWidgets)
++
++    if (ANDROID_ABI STREQUAL "arm64-v8a")
++        set(PYQT5_ANDROID_TRIPLET "aarch64-linux-android")
++    elseif (ANDROID_ABI STREQUAL "x86_64")
++        set(PYQT5_ANDROID_TRIPLET "x86_64-linux-android")
++    else()
++        message(FATAL_ERROR
++            "PyQt5 Android cross-build is currently wired only for "
++            "arm64-v8a and x86_64; got ANDROID_ABI=${ANDROID_ABI}")
++    endif()
++
++    if(NOT EXISTS "${EXTPREFIX}/bin/qmake")
++        message(FATAL_ERROR
++            "PyQt5 Android cross-build requires Android qmake at "
++            "${EXTPREFIX}/bin/qmake. Build ext_qt first or provide a Qt for "
++            "Android prefix before configuring ext_pyqt5.")
++    endif()
++
++    set(PYQT5_ANDROID_EXTENSION_SUFFIX
++        ".cpython-314-${PYQT5_ANDROID_TRIPLET}.so")
++    set(PYQT5_ANDROID_TARGET_DIR
++        "${EXTPREFIX}/lib/python${PYQT5_ANDROID_PYTHON_VERSION}/site-packages")
++    set(PYQT5_ANDROID_LD_LIBRARY_PATH "${EXTPREFIX}/lib")
++
++    if(DEFINED ENV{LD_LIBRARY_PATH} AND NOT "$ENV{LD_LIBRARY_PATH}" STREQUAL "")
++        set(PYQT5_ANDROID_LD_LIBRARY_PATH
++            "${PYQT5_ANDROID_LD_LIBRARY_PATH}:$ENV{LD_LIBRARY_PATH}")
++    endif()
++
++    unset(PYQT5_ANDROID_ENABLE_ARGS)
++    foreach(binding ${PYQT5_ANDROID_BINDINGS})
++        list(APPEND PYQT5_ANDROID_ENABLE_ARGS --enable ${binding})
++    endforeach()
++
++    # pyqtbuild only adds Python link search paths for Windows projects. Android
++    # modules still need an explicit target libpython link.
++    set(PYQT5_ANDROID_QMAKE_SETTINGS
++        --qmake-setting "LIBS += -L${EXTPREFIX}/lib -lpython${PYQT5_ANDROID_PYTHON_VERSION}"
++        --qmake-setting "INCLUDEPATH += ${EXTPREFIX}/include/python${PYQT5_ANDROID_PYTHON_VERSION}"
++        --qmake-setting "DEFINES += __BIONIC_NO_PAGE_SIZE_MACRO"
++        --qmake-setting "QMAKE_LFLAGS += -Wl,-z,max-page-size=16384")
++
++    ExternalProject_Add( ext_pyqt5
++        DOWNLOAD_DIR ${EXTERNALS_DOWNLOAD_DIR}
++        URL https://files.pythonhosted.org/packages/0e/07/c9ed0bd428df6f87183fca565a79fee19fa7c88c7f00a7f011ab4379e77a/PyQt5-5.15.11.tar.gz
++        URL_HASH SHA256=fda45743ebb4a27b4b1a51c6d8ef455c4c1b5d610c90d2934c7802b5c1557c52
++
++        PATCH_COMMAND
++            ${CMAKE_COMMAND}
++                -DPYQT5_SOURCE_DIR=<SOURCE_DIR>
++                -DPYQT5_PYTHON_MAJOR_VERSION=3
++                -DPYQT5_PYTHON_MINOR_VERSION=14
++                -DPYQT5_PYTHON_INCLUDE_DIR=${EXTPREFIX}/include/python${PYQT5_ANDROID_PYTHON_VERSION}
++                -DPYQT5_PYTHON_LIBRARY_DIR=${EXTPREFIX}/lib
++                -DPYQT5_PYTHON_LIBRARY_NAME=python${PYQT5_ANDROID_PYTHON_VERSION}
++                -DPYQT5_PYTHON_SHARED_LIBRARY=${EXTPREFIX}/lib/libpython${PYQT5_ANDROID_PYTHON_VERSION}.so
++                -P ${CMAKE_CURRENT_SOURCE_DIR}/android/configure_pyproject.cmake
++
++        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
++            "PYTHONPATH=${KRITA_PYTHONPATH}"
++            "LD_LIBRARY_PATH=${PYQT5_ANDROID_LD_LIBRARY_PATH}"
++            "ANDROID_ABI=${ANDROID_ABI}"
++            "ANDROID_SDK_ROOT=$ENV{ANDROID_SDK_ROOT}"
++            "ANDROID_HOME=$ENV{ANDROID_HOME}"
++            "ANDROID_NDK_ROOT=$ENV{ANDROID_NDK_ROOT}"
++            ${EXTPREFIX}/bin/sip-build
++                --confirm-license
++                --no-designer-plugin
++                --no-qml-plugin
++                --no-dbus-python
++                --no-tools
++                --no-make
++                --jobs ${SUBMAKE_JOBS}
++                --qmake ${EXTPREFIX}/bin/qmake
++                --spec android-clang
++                --android-abi ${ANDROID_ABI}
++                --target-dir ${PYQT5_ANDROID_TARGET_DIR}
++                ${PYQT5_ANDROID_QMAKE_SETTINGS}
++                ${PYQT5_ANDROID_ENABLE_ARGS}
++
++        BUILD_COMMAND ${CMAKE_COMMAND} -E env
++            "PYTHONPATH=${KRITA_PYTHONPATH}"
++            "LD_LIBRARY_PATH=${PYQT5_ANDROID_LD_LIBRARY_PATH}"
++            make -C <SOURCE_DIR>/build -j${SUBMAKE_JOBS}
++
++        # force single-threaded installation to avoid
++        # race conditions in post-install .py script
++        INSTALL_COMMAND ${CMAKE_COMMAND} -E env
++            "PYTHONPATH=${KRITA_PYTHONPATH}"
++            "LD_LIBRARY_PATH=${PYQT5_ANDROID_LD_LIBRARY_PATH}"
++            ${CMAKE_COMMAND} -E chdir <SOURCE_DIR>/build
++            ${CMAKE_COMMAND} -DMAKE_COMMAND=make -P ${KRITA_CI_RUN_MAKE_WITH_INSTALL_ROOT} -- -j1 install
++            COMMAND ${CMAKE_COMMAND}
++                -DPYQT5_SITE_PACKAGES=${PYQT5_ANDROID_TARGET_DIR}
++                -DPYQT5_ANDROID_EXTENSION_SUFFIX=${PYQT5_ANDROID_EXTENSION_SUFFIX}
++                -P ${CMAKE_CURRENT_SOURCE_DIR}/android/rename_pyqt5_modules.cmake
++            COMMAND ${CMAKE_COMMAND} -DPREFIX=${EXTPREFIX} -P ${KRITA_CI_FIX_PYTHON_SHEBANG_LINES}
++
++        BUILD_IN_SOURCE 1
++
++        UPDATE_COMMAND ""
++    )
++
++    krita_add_to_ci_targets(ext_pyqt5)
++    return()
++endif()
++
+ if(UNIX)
+     if (QT_ENABLE_ASAN)
+        set(_extra_pyqt_config --qmake-setting QMAKE_LFLAGS+=-fsanitize=address --qmake-setting QMAKE_CFLAGS+=-fsanitize=address --qmake-setting QMAKE_CXXFLAGS+=-fsanitize=address)
+diff --git a/ext_pyqt5/android/configure_pyproject.cmake b/ext_pyqt5/android/configure_pyproject.cmake
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/ext_pyqt5/android/configure_pyproject.cmake
+@@ -0,0 +1,50 @@
++foreach(required_var
++        PYQT5_SOURCE_DIR
++        PYQT5_PYTHON_MAJOR_VERSION
++        PYQT5_PYTHON_MINOR_VERSION
++        PYQT5_PYTHON_INCLUDE_DIR
++        PYQT5_PYTHON_LIBRARY_DIR
++        PYQT5_PYTHON_LIBRARY_NAME
++        PYQT5_PYTHON_SHARED_LIBRARY)
++    if(NOT DEFINED ${required_var})
++        message(FATAL_ERROR "${required_var} is required")
++    endif()
++endforeach()
++
++set(pyproject_toml "${PYQT5_SOURCE_DIR}/pyproject.toml")
++
++if(NOT EXISTS "${pyproject_toml}")
++    message(FATAL_ERROR "pyproject.toml was not found at ${pyproject_toml}")
++endif()
++
++if(NOT EXISTS "${PYQT5_PYTHON_INCLUDE_DIR}/Python.h")
++    message(FATAL_ERROR
++        "Python.h was not found in ${PYQT5_PYTHON_INCLUDE_DIR}")
++endif()
++
++if(NOT EXISTS "${PYQT5_PYTHON_SHARED_LIBRARY}")
++    message(FATAL_ERROR
++        "Python shared library was not found at ${PYQT5_PYTHON_SHARED_LIBRARY}")
++endif()
++
++file(READ "${pyproject_toml}" pyproject_contents)
++if(pyproject_contents MATCHES "\\[tool\\.sip\\.project\\]")
++    message(FATAL_ERROR
++        "PyQt5 pyproject.toml already contains [tool.sip.project]; update "
++        "the Android patch to merge target Python settings instead of "
++        "appending a duplicate table.")
++endif()
++
++function(pyqt5_toml_escape input output)
++    string(REPLACE "\\" "\\\\" escaped "${input}")
++    string(REPLACE "\"" "\\\"" escaped "${escaped}")
++    set(${output} "${escaped}" PARENT_SCOPE)
++endfunction()
++
++pyqt5_toml_escape("${PYQT5_PYTHON_INCLUDE_DIR}" toml_python_include_dir)
++pyqt5_toml_escape("${PYQT5_PYTHON_LIBRARY_DIR}" toml_python_library_dir)
++pyqt5_toml_escape("${PYQT5_PYTHON_LIBRARY_NAME}" toml_python_library_name)
++pyqt5_toml_escape("${PYQT5_PYTHON_SHARED_LIBRARY}" toml_python_shared_library)
++
++file(APPEND "${pyproject_toml}" "
++[tool.sip.project]
++py-major-version = ${PYQT5_PYTHON_MAJOR_VERSION}
++py-minor-version = ${PYQT5_PYTHON_MINOR_VERSION}
++py-include-dir = \"${toml_python_include_dir}\"
++py-pylib-dir = \"${toml_python_library_dir}\"
++py-pylib-lib = \"${toml_python_library_name}\"
++py-pylib-shlib = \"${toml_python_shared_library}\"
++")
+diff --git a/ext_pyqt5/android/rename_pyqt5_modules.cmake b/ext_pyqt5/android/rename_pyqt5_modules.cmake
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/ext_pyqt5/android/rename_pyqt5_modules.cmake
+@@ -0,0 +1,55 @@
++foreach(required_var
++        PYQT5_SITE_PACKAGES
++        PYQT5_ANDROID_EXTENSION_SUFFIX)
++    if(NOT DEFINED ${required_var})
++        message(FATAL_ERROR "${required_var} is required")
++    endif()
++endforeach()
++
++set(pyqt_package_dir "${PYQT5_SITE_PACKAGES}/PyQt5")
++
++if(NOT IS_DIRECTORY "${pyqt_package_dir}")
++    message(FATAL_ERROR "PyQt5 package directory was not found at ${pyqt_package_dir}")
++endif()
++
++set(expected_modules QtCore QtNetwork QtGui QtWidgets)
++
++file(GLOB pyqt_host_named_modules
++    "${pyqt_package_dir}/*.cpython-*.so")
++
++foreach(module_path ${pyqt_host_named_modules})
++    get_filename_component(module_name "${module_path}" NAME)
++
++    if(module_name MATCHES "^([^.]+)\\.cpython-.*\\.so$")
++        set(target_path
++            "${pyqt_package_dir}/${CMAKE_MATCH_1}${PYQT5_ANDROID_EXTENSION_SUFFIX}")
++
++        if(NOT module_path STREQUAL target_path)
++            if(EXISTS "${target_path}")
++                file(REMOVE "${target_path}")
++            endif()
++            file(RENAME "${module_path}" "${target_path}")
++        endif()
++    endif()
++endforeach()
++
++foreach(expected_module ${expected_modules})
++    set(expected_path
++        "${pyqt_package_dir}/${expected_module}${PYQT5_ANDROID_EXTENSION_SUFFIX}")
++
++    if(NOT EXISTS "${expected_path}")
++        message(FATAL_ERROR
++            "Expected Android PyQt5 module was not installed: ${expected_path}")
++    endif()
++endforeach()
++
++set(pyqt_sip_module
++    "${pyqt_package_dir}/sip${PYQT5_ANDROID_EXTENSION_SUFFIX}")
++
++if(NOT EXISTS "${pyqt_sip_module}")
++    message(FATAL_ERROR
++        "Expected Android PyQt5 sip module was not installed: ${pyqt_sip_module}")
++endif()
++
++if(NOT EXISTS "${pyqt_package_dir}/bindings/QtCore/QtCore.toml")
++    message(FATAL_ERROR
++        "Expected PyQt5 SIP binding metadata was not installed under "
++        "${pyqt_package_dir}/bindings")
++endif()
+--
+2.45.0
