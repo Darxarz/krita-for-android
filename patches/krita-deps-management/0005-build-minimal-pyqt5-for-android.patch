@@ -11,9 +11,9 @@ uses Android qmake explicitly, and builds the first runtime binding set needed
 by PyKrita experiments.
 ---
  ext_pyqt5/CMakeLists.txt                     | 110 +++++++++++++++++++
- ext_pyqt5/android/configure_pyproject.cmake  |  61 ++++++++++
+ ext_pyqt5/android/configure_pyproject.cmake  |  64 ++++++++++
  ext_pyqt5/android/rename_pyqt5_modules.cmake |  55 ++++++++++
- 3 files changed, 226 insertions(+)
+ 3 files changed, 229 insertions(+)
  create mode 100644 ext_pyqt5/android/configure_pyproject.cmake
  create mode 100644 ext_pyqt5/android/rename_pyqt5_modules.cmake
 
@@ -143,7 +143,7 @@ new file mode 100644
 index 0000000..0000000
 --- /dev/null
 +++ b/ext_pyqt5/android/configure_pyproject.cmake
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,64 @@
 +foreach(required_var
 +        PYQT5_SOURCE_DIR
 +        PYQT5_PYTHON_MAJOR_VERSION
@@ -201,6 +201,9 @@ index 0000000..0000000
 +py-pylib-dir = "@toml_python_library_dir@"
 +py-pylib-lib = "@toml_python_library_name@"
 +py-pylib-shlib = "@toml_python_shared_library@"
++
++[tool.sip.bindings.QtGui]
++disabled-features = ["PyQt_Desktop_OpenGL"]
 +]=])
 +
 +string(CONFIGURE "${pyqt_project_settings}" pyqt_project_settings @ONLY)
