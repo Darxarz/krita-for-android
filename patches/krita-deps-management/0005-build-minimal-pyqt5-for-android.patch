@@ -12,8 +12,8 @@ by PyKrita experiments.
 ---
  ext_pyqt5/CMakeLists.txt                     | 110 +++++++++++++++++++
  ext_pyqt5/android/configure_pyproject.cmake  |  64 ++++++++++
- ext_pyqt5/android/rename_pyqt5_modules.cmake |  55 ++++++++++
- 3 files changed, 229 insertions(+)
+ ext_pyqt5/android/rename_pyqt5_modules.cmake |  59 ++++++++++
+ 3 files changed, 233 insertions(+)
  create mode 100644 ext_pyqt5/android/configure_pyproject.cmake
  create mode 100644 ext_pyqt5/android/rename_pyqt5_modules.cmake
 
@@ -213,7 +213,7 @@ new file mode 100644
 index 0000000..0000000
 --- /dev/null
 +++ b/ext_pyqt5/android/rename_pyqt5_modules.cmake
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,59 @@
 +foreach(required_var
 +        PYQT5_SITE_PACKAGES
 +        PYQT5_ANDROID_EXTENSION_SUFFIX)
@@ -231,12 +231,13 @@ index 0000000..0000000
 +set(expected_modules QtCore QtNetwork QtGui QtWidgets)
 +
 +file(GLOB pyqt_host_named_modules
-+    "${pyqt_package_dir}/*.cpython-*.so")
++    "${pyqt_package_dir}/*.cpython-*.so"
++    "${pyqt_package_dir}/*.abi3.so")
 +
 +foreach(module_path ${pyqt_host_named_modules})
 +    get_filename_component(module_name "${module_path}" NAME)
 +
-+    if(module_name MATCHES "^([^.]+)\\.cpython-.*\\.so$")
++    if(module_name MATCHES "^([^.]+)(\\.cpython-.*|\\.abi3)\\.so$")
 +        set(target_path
 +            "${pyqt_package_dir}/${CMAKE_MATCH_1}${PYQT5_ANDROID_EXTENSION_SUFFIX}")
 +
