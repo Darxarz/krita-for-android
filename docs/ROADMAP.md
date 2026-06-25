@@ -56,6 +56,11 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191619971
 dependency prefix для `arm64-v8a` и `x86_64`; `sipbuild` и `pyqtbuild` импортируются через
 host Python, а target `libpython3.14.so` остаётся в этом же prefix.
 
+Следующий слой: `ext_pyqt5-sip`. Добавлен patch-кандидат
+`0004-build-pyqt5-sip-for-android.patch`, который не запускает host `pip install` для
+target module, а собирает `PyQt5/sip.cpython-314-<triplet>.so` через NDK CMake sub-build
+и устанавливает `sip.h` в Android Python include-prefix.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;

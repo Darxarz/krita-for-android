@@ -20,6 +20,8 @@
 - `patches/krita-deps-management/0001-ext-python-android-release-package.patch` -
   первый экспериментальный патч для dependency recipe Krita: заменить TODO/FATAL_ERROR
   в `ext_python` на установку официального Android Python package.
+- `patches/krita-deps-management/0004-build-pyqt5-sip-for-android.patch` -
+  экспериментальный Android cross-build для модуля `PyQt5.sip`.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.

@@ -1,0 +1,129 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH] ext_pyqt5-sip: cross-build Android module with CMake
+
+The normal Unix recipe runs pip with the build host's Python. On Android that
+produces a host extension module, but Krita needs a target module named like
+PyQt5/sip.cpython-314-aarch64-linux-android.so. Add an Android-only CMake
+sub-build that compiles the small PyQt5_sip C extension with the NDK and
+installs the public sip.h next to the target Python headers for later PyQt5
+build steps.
+---
+ ext_pyqt5-sip/CMakeLists.txt         | 46 ++++++++++++++++++++++++++++
+ ext_pyqt5-sip/android/CMakeLists.txt | 47 +++++++++++++++++++++++++++++
+ 2 files changed, 93 insertions(+)
+ create mode 100644 ext_pyqt5-sip/android/CMakeLists.txt
+
+diff --git a/ext_pyqt5-sip/CMakeLists.txt b/ext_pyqt5-sip/CMakeLists.txt
+index 0000000..0000000 100644
+--- a/ext_pyqt5-sip/CMakeLists.txt
++++ b/ext_pyqt5-sip/CMakeLists.txt
+@@ -7,6 +7,52 @@ project(ext_pyqt5-sip)
+ include(${CMAKE_SOURCE_DIR}/../cmake/base-dep-options.cmake)
+ include(${CMAKE_SOURCE_DIR}/../cmake/krita_initialize_python.cmake)
+ 
++if(ANDROID)
++    set(PYQT5_SIP_PYTHON_VERSION "3.14")
++
++    if (ANDROID_ABI STREQUAL "arm64-v8a")
++        set(PYQT5_SIP_ANDROID_TRIPLET "aarch64-linux-android")
++    elseif (ANDROID_ABI STREQUAL "x86_64")
++        set(PYQT5_SIP_ANDROID_TRIPLET "x86_64-linux-android")
++    else()
++        message(FATAL_ERROR
++            "PyQt5_sip Android cross-build is currently wired only for "
++            "arm64-v8a and x86_64; got ANDROID_ABI=${ANDROID_ABI}")
++    endif()
++
++    set(PYQT5_SIP_EXTENSION_SUFFIX
++        ".cpython-314-${PYQT5_SIP_ANDROID_TRIPLET}.so")
++
++    ExternalProject_Add( ext_pyqt5-sip
++        DOWNLOAD_DIR ${EXTERNALS_DOWNLOAD_DIR}
++        URL https://files.pythonhosted.org/packages/01/79/086b50414bafa71df494398ad277d72e58229a3d1c1b1c766d12b14c2e6d/pyqt5_sip-12.17.0.tar.gz
++        URL_HASH SHA256=682dadcdbd2239af9fdc0c0628e2776b820e128bec88b49b8d692fe682f90b4f
++
++        CONFIGURE_COMMAND
++            ${CMAKE_COMMAND}
++                -S ${CMAKE_CURRENT_SOURCE_DIR}/android
++                -B <BINARY_DIR>/android-build
++                -G ${CMAKE_GENERATOR}
++                -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
++                -DANDROID_ABI=${ANDROID_ABI}
++                -DANDROID_PLATFORM=${ANDROID_PLATFORM}
++                -DANDROID_STL=${ANDROID_STL}
++                -DCMAKE_INSTALL_PREFIX=${EXTPREFIX}
++                -DPYQT5_SIP_SOURCE_DIR=<SOURCE_DIR>
++                -DPYTHON_INCLUDE_DIR=${EXTPREFIX}/include/python${PYQT5_SIP_PYTHON_VERSION}
++                -DPYTHON_LIBRARY=${EXTPREFIX}/lib/libpython${PYQT5_SIP_PYTHON_VERSION}.so
++                -DPYTHON_SITE_PACKAGES=lib/python${PYQT5_SIP_PYTHON_VERSION}/site-packages
++                -DPYTHON_EXTENSION_SUFFIX=${PYQT5_SIP_EXTENSION_SUFFIX}
++                -DPYQT5_SIP_INCLUDE_DIR=include/python${PYQT5_SIP_PYTHON_VERSION}
++        BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>/android-build --verbose
++        INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR>/android-build
++        UPDATE_COMMAND ""
++    )
++
++    krita_add_to_ci_targets(ext_pyqt5-sip)
++    return()
++endif()
++
+ if(UNIX)
+     ExternalProject_Add( ext_pyqt5-sip
+         DOWNLOAD_DIR ${EXTERNALS_DOWNLOAD_DIR}
+diff --git a/ext_pyqt5-sip/android/CMakeLists.txt b/ext_pyqt5-sip/android/CMakeLists.txt
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/ext_pyqt5-sip/android/CMakeLists.txt
+@@ -0,0 +1,47 @@
++cmake_minimum_required(VERSION 3.21)
++
++project(pyqt5_sip_android C)
++
++foreach(required_var
++        PYQT5_SIP_SOURCE_DIR
++        PYTHON_INCLUDE_DIR
++        PYTHON_LIBRARY
++        PYTHON_SITE_PACKAGES
++        PYTHON_EXTENSION_SUFFIX
++        PYQT5_SIP_INCLUDE_DIR)
++    if(NOT DEFINED ${required_var})
++        message(FATAL_ERROR "${required_var} is required")
++    endif()
++endforeach()
++
++if(NOT EXISTS "${PYTHON_INCLUDE_DIR}/Python.h")
++    message(FATAL_ERROR "Python.h was not found in ${PYTHON_INCLUDE_DIR}")
++endif()
++
++if(NOT EXISTS "${PYTHON_LIBRARY}")
++    message(FATAL_ERROR "Python library was not found at ${PYTHON_LIBRARY}")
++endif()
++
++file(GLOB pyqt5_sip_sources CONFIGURE_DEPENDS
++    "${PYQT5_SIP_SOURCE_DIR}/*.c")
++
++add_library(pyqt5_sip MODULE ${pyqt5_sip_sources})
++target_include_directories(pyqt5_sip PRIVATE
++    "${PYQT5_SIP_SOURCE_DIR}"
++    "${PYTHON_INCLUDE_DIR}")
++target_compile_definitions(pyqt5_sip PRIVATE
++    __BIONIC_NO_PAGE_SIZE_MACRO)
++target_compile_options(pyqt5_sip PRIVATE
++    -fvisibility=hidden)
++target_link_libraries(pyqt5_sip PRIVATE
++    "${PYTHON_LIBRARY}")
++target_link_options(pyqt5_sip PRIVATE
++    "LINKER:-z,max-page-size=16384")
++
++set_target_properties(pyqt5_sip PROPERTIES
++    PREFIX ""
++    OUTPUT_NAME "sip"
++    SUFFIX "${PYTHON_EXTENSION_SUFFIX}")
++
++install(TARGETS pyqt5_sip LIBRARY DESTINATION "${PYTHON_SITE_PACKAGES}/PyQt5")
++install(FILES "${PYQT5_SIP_SOURCE_DIR}/sip.h" DESTINATION "${PYQT5_SIP_INCLUDE_DIR}")
+-- 
+2.45.0
