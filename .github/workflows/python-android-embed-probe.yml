@@ -1,0 +1,48 @@
+name: Python Android embed probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/python-android-embed-probe.yml"
+      - "probes/cpython-android-embed/**"
+      - "scripts/download-python-android.ps1"
+      - "scripts/build-python-embed-probe.ps1"
+
+jobs:
+  build:
+    name: Build ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK and CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "ndk;27.3.13750724" "cmake;3.22.1"
+
+      - name: Build embed probe
+        shell: pwsh
+        run: |
+          ./scripts/build-python-embed-probe.ps1 `
+            -Abi "${{ matrix.abi }}" `
+            -AndroidNdkRoot "$env:ANDROID_HOME/ndk/27.3.13750724"
+
+      - name: Upload probe library
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-android-embed-probe-${{ matrix.abi }}
+          path: |
+            build/python-embed-probe/${{ matrix.abi }}/libkrita_android_python_probe.so
+            build/python-embed-probe/${{ matrix.abi }}/libpython3.14.so

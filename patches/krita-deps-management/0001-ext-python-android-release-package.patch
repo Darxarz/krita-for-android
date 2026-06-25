@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH] ext_python: use official CPython Android release package
+
+This is an experimental first-stage patch. It only makes ext_python install an
+Android CPython prefix for arm64-v8a and x86_64. It does not solve SIP/PyQt or
+PyKrita cross-build discovery yet.
+---
+ ext_python/CMakeLists.txt | 42 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 41 insertions(+), 1 deletion(-)
+
+diff --git a/ext_python/CMakeLists.txt b/ext_python/CMakeLists.txt
+index 0000000..0000000 100644
+--- a/ext_python/CMakeLists.txt
++++ b/ext_python/CMakeLists.txt
+@@ -75,8 +75,48 @@ if (UNIX)
+ 
+     else()
+ 
+     if (ANDROID)
+-        message (FATAL_ERROR "TODO: the build of Python on Android is not implemented! It should use --with-openssl=${EXTPREFIX} to use proper openssl")
++        set(PYTHON_SHORT_VERSION "3.14")
++        set(PYTHON_VERSION "3.14.0")
++
++        if (ANDROID_ABI STREQUAL "arm64-v8a")
++            set(PYTHON_ANDROID_TRIPLET "aarch64-linux-android")
++            set(PYTHON_ANDROID_SHA256 "F09BD8AE86F408580881AE224E848805C267BB65B3111DC77B41BDA79456DA6C")
++        elseif (ANDROID_ABI STREQUAL "x86_64")
++            set(PYTHON_ANDROID_TRIPLET "x86_64-linux-android")
++            set(PYTHON_ANDROID_SHA256 "5C953DF43E47C43CE55888ACC5F09F6CAC67F2E292480B906BE37C14381516E7")
++        else()
++            message(FATAL_ERROR
++                "Official CPython Android release packages are currently wired "
++                "only for arm64-v8a and x86_64; got ANDROID_ABI=${ANDROID_ABI}")
++        endif()
++
++        set(PYTHON_ANDROID_ARCHIVE
++            "python-${PYTHON_VERSION}-${PYTHON_ANDROID_TRIPLET}.tar.gz")
++
++        ExternalProject_Add( ext_python
++            DOWNLOAD_DIR ${EXTERNALS_DOWNLOAD_DIR}
++            URL https://www.python.org/ftp/python/${PYTHON_VERSION}/${PYTHON_ANDROID_ARCHIVE}
++            URL_HASH SHA256=${PYTHON_ANDROID_SHA256}
++
++            CONFIGURE_COMMAND ""
++            BUILD_COMMAND ""
++            INSTALL_COMMAND
++                ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/prefix ${EXTPREFIX}
++                COMMAND ${CMAKE_COMMAND} -E echo
++                    "Installed Android Python ${PYTHON_VERSION} (${PYTHON_ANDROID_TRIPLET}) into ${EXTPREFIX}"
++
++            UPDATE_COMMAND ""
++        )
++
++        if (NOT TARGET ext_install)
++            add_custom_target(ext_install)
++        endif()
++
++        krita_add_to_ci_targets(ext_python)
++
++        # Stop before the normal Unix source-build recipe below. Android uses
++        # the official CPython embedded release package instead of running the
++        # target interpreter on the build host.
++        return()
+     endif()
+ 
+     ExternalProject_Add( ext_python
+-- 
+2.45.0
