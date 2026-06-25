@@ -22,6 +22,8 @@
   в `ext_python` на установку официального Android Python package.
 - `patches/krita-deps-management/0004-build-pyqt5-sip-for-android.patch` -
   экспериментальный Android cross-build для модуля `PyQt5.sip`.
+- `.github/workflows/krita-deps-pyqt5-sip-android.yml` - проверяет, что `PyQt5.sip`
+  собирается как Android extension module для `arm64-v8a` и `x86_64`.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.

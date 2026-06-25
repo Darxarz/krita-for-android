@@ -61,6 +61,15 @@ host Python, а target `libpython3.14.so` остаётся в этом же pref
 target module, а собирает `PyQt5/sip.cpython-314-<triplet>.so` через NDK CMake sub-build
 и устанавливает `sip.h` в Android Python include-prefix.
 
+CI `Krita deps PyQt5 SIP Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28192903905
+
+Проверено: артефакты `krita-deps-pyqt5-sip-arm64-v8a` и
+`krita-deps-pyqt5-sip-x86_64` содержат target Android extension module
+`PyQt5/sip.cpython-314-<triplet>.so`; workflow проверяет ELF machine type и зависимость
+от `libpython3.14.so`.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;
