@@ -35,6 +35,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build
 
+      - name: Set up host Python for dependency tools
+        run: |
+          python3 -m venv .venv --upgrade-deps
+          . .venv/bin/activate
+          python -m pip install --upgrade pip setuptools wheel
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+
       - name: Clone Krita deps management
         run: |
           git clone --depth 1 https://invent.kde.org/packaging/krita-deps-management.git upstream/krita-deps-management
