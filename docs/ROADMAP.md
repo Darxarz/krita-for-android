@@ -21,17 +21,22 @@
 
 ## Phase 1 - ext_python для Krita deps
 
+Статус: зелёная проверка в GitHub Actions.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191101042
+
 Взять `patches/krita-deps-management/0001-ext-python-android-release-package.patch` и
 применить его в форке `krita-deps-management`.
 
-Критерий готовности: `ext_python` перестает падать на Android и устанавливает:
+Критерий готовности выполнен: `ext_python` перестает падать на Android и устанавливает:
 
 - `include/python3.14`;
 - `lib/libpython3.14.so`;
 - `lib/python3.14`;
 - companion `.so` из Python package.
 
-На этом этапе `pykrita` еще не обязан собираться.
+На этом этапе `pykrita` еще не обязан собираться. Дополнительно добавлен patch-кандидат,
+который включает `base/python` в Android dependency seed.
 
 ## Phase 2 - SIP/PyQt split для cross-build
 

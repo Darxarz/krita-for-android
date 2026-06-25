@@ -1,0 +1,33 @@
+name: Upstream patch checks
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/upstream-patches.yml"
+      - "patches/**"
+
+jobs:
+  krita-deps-management:
+    name: Apply krita-deps-management patches
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Clone Krita deps management
+        run: |
+          git clone --depth 1 https://invent.kde.org/packaging/krita-deps-management.git upstream/krita-deps-management
+
+      - name: Apply patches
+        run: |
+          for patch in patches/krita-deps-management/*.patch; do
+            echo "Checking $patch"
+            git -C upstream/krita-deps-management apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita-deps-management apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Show patched diff summary
+        run: |
+          git -C upstream/krita-deps-management diff --stat

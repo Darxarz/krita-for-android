@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH] latest: include Python in Android dependency seed
+
+After ext_python learns how to install an Android CPython prefix, Android builds
+need to request the dependency from the seed file. SIP/PyQt/PyKrita are still
+separate follow-up work.
+---
+ latest/krita-deps.yml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/latest/krita-deps.yml b/latest/krita-deps.yml
+index 0000000..0000000 100644
+--- a/latest/krita-deps.yml
++++ b/latest/krita-deps.yml
+@@ -130,7 +130,8 @@
+ - 'on': ['Android']
+   'require':
+     "base/zlib": "master"
+     "base/gettext": "master"
+     "base/openssl": "master"
++    "base/python": "master"
+     "base/libintl-lite": "master"
+     "base/libunwindstack-ndk": "master"
+-- 
+2.45.0
