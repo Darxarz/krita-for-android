@@ -82,14 +82,25 @@ Qt for Android через `aqtinstall`, а затем собирает уже п
 пробует минимальный PyQt5 runtime. Это проверка сборочного рецепта; полноценная интеграция
 с upstream `ext_qt` остается отдельным шагом.
 
+CI `Krita deps PyQt5 minimal Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28196914189
+
+Проверено: артефакты `krita-deps-pyqt5-minimal-arm64-v8a` и
+`krita-deps-pyqt5-minimal-x86_64` содержат Android target modules
+`PyQt5/sip.cpython-314-<triplet>.so`, `QtCore`, `QtNetwork`, `QtGui` и `QtWidgets`.
+Workflow проверяет ELF machine type, зависимость от `libpython3.14.so` и наличие SIP
+metadata `PyQt5/bindings/QtCore/QtCore.toml`.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;
 - target Python: Android `libpython`, headers и extension modules, с которыми линкуется
   Krita и которые попадут в APK.
 
-Критерий готовности: Android deps содержат PyQt5 runtime modules и SIP metadata достаточно
-полные, чтобы Krita смогла собрать `plugins/extensions/pykrita/sip`.
+Критерий готовности выполнен для минимального PyQt5 runtime: Android deps содержат PyQt5
+runtime modules и SIP metadata достаточно полные, чтобы перейти к сборке
+`plugins/extensions/pykrita/sip`.
 
 ## Phase 3 - PyKrita в Android-сборке Krita
 

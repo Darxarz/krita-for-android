@@ -92,6 +92,22 @@ proof-layer проверяет сам `ext_pyqt5` отдельно: CI став�
 `ext_pyqt5` поверх уже собранных `ext_python`, `ext_sip`, `ext_pyqt-builder` и
 `ext_pyqt5-sip`.
 
-Это не заменяет будущую интеграцию с Krita `ext_qt`, но должно быстро показать, какие
-именно ошибки остаются в PyQt/SIP cross-build: qmake mkspec, target Python metadata,
-suffix names, линковка к `libpython3.14.so` или набор необходимых Qt modules.
+CI probe `Krita deps PyQt5 minimal Android` теперь зелёный:
+https://github.com/Darxarz/krita-for-android/actions/runs/28196914189
+
+Проверенный минимальный набор PyQt5 для Android:
+
+- `PyQt5/sip.cpython-314-<triplet>.so`;
+- `PyQt5/QtCore.cpython-314-<triplet>.so`;
+- `PyQt5/QtNetwork.cpython-314-<triplet>.so`;
+- `PyQt5/QtGui.cpython-314-<triplet>.so`;
+- `PyQt5/QtWidgets.cpython-314-<triplet>.so`;
+- SIP metadata under `PyQt5/bindings`.
+
+Во время сборки PyQt5 генерирует limited-API модули как `Qt*.abi3.so`; Android-only
+install step переименовывает их в target suffix `cpython-314-<triplet>`, чтобы Krita CMake
+и packaging layer могли искать обычные Android extension module names.
+
+Это не заменяет будущую интеграцию с Krita `ext_qt`, но уже показывает, что qmake mkspec,
+target Python metadata, suffix names, линковка к `libpython3.14.so` и минимальный набор Qt
+modules работают для `arm64-v8a` и `x86_64`.
