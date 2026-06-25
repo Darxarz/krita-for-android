@@ -1,0 +1,89 @@
+name: Krita deps Python tools Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-deps-python-tools-android.yml"
+      - "patches/krita-deps-management/*.patch"
+
+jobs:
+  build:
+    name: Build Python tools ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK and CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "ndk;27.3.13750724" "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Clone Krita deps management
+        run: |
+          git clone --depth 1 https://invent.kde.org/packaging/krita-deps-management.git upstream/krita-deps-management
+
+      - name: Apply dependency patches
+        run: |
+          for patch in patches/krita-deps-management/*.patch; do
+            git -C upstream/krita-deps-management apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Build ext_python, ext_sip, and ext_pyqt-builder
+        run: |
+          set -eux
+
+          configure_and_install() {
+            dep="$1"
+            cmake \
+              -S "upstream/krita-deps-management/${dep}" \
+              -B "build/python-tools/${{ matrix.abi }}/${dep}" \
+              -G Ninja \
+              -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI="${{ matrix.abi }}" \
+              -DANDROID_PLATFORM=android-24 \
+              -DANDROID_STL=c++_shared \
+              -DEXTERNALS_DOWNLOAD_DIR="$GITHUB_WORKSPACE/artifacts/krita-deps-downloads" \
+              -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/artifacts/krita-python-tools/${{ matrix.abi }}"
+
+            cmake --build "build/python-tools/${{ matrix.abi }}/${dep}" --target ext_install --verbose
+          }
+
+          configure_and_install ext_python
+          configure_and_install ext_sip
+          configure_and_install ext_pyqt-builder
+
+      - name: Verify Python tool imports
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-python-tools/${{ matrix.abi }}"
+          host_py="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+          export PYTHONPATH="$prefix/lib/python3.14/site-packages:$prefix/lib/python${host_py}/site-packages"
+
+          test -f "$prefix/lib/libpython3.14.so"
+          test -x "$prefix/bin/sip-build"
+          python3 -c "import sipbuild, pyqtbuild; print('sipbuild+pyqtbuild import ok')"
+          "$prefix/bin/sip-build" --help >/dev/null
+
+      - name: Upload Python tools prefix
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-deps-python-tools-${{ matrix.abi }}
+          path: artifacts/krita-python-tools/${{ matrix.abi }}

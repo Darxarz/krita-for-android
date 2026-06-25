@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@example.invalid>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH] cmake: use Android target and host Python paths
+
+The official CPython Android release package wired by ext_python is currently
+3.14.x, so Android dependency builds must search its
+lib/python3.14/site-packages path. Android still uses the build host's python3
+to run pip-installed build tools, so include the host-version prefixed
+site-packages path as well.
+---
+ cmake/krita_initialize_python.cmake | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/cmake/krita_initialize_python.cmake b/cmake/krita_initialize_python.cmake
+index 0000000..0000000 100644
+--- a/cmake/krita_initialize_python.cmake
++++ b/cmake/krita_initialize_python.cmake
+@@ -59,13 +59,24 @@ if (WIN32)
+         endif ()
+     endif ()
+ elseif(UNIX)
+-    set(PYTHON_VERSION "3.13")
++    if (ANDROID)
++        set(PYTHON_VERSION "3.14")
++    else()
++        set(PYTHON_VERSION "3.13")
++    endif()
+ 
+     set(KRITA_PYTHONPATH "${EXTPREFIX}/lib/python${PYTHON_VERSION}/site-packages")
+     set(Python_EXECUTABLE "${EXTPREFIX}/bin/python3")
+     if(NOT EXISTS "${Python_EXECUTABLE}")
+         message("WARNING: using system python3!")
+         SET(Python_EXECUTABLE python3)
+     endif()
++    if(ANDROID)
++        execute_process(
++            COMMAND ${Python_EXECUTABLE} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
++            OUTPUT_VARIABLE PYTHON_BUILD_VERSION
++            OUTPUT_STRIP_TRAILING_WHITESPACE)
++        set(KRITA_PYTHONPATH "${KRITA_PYTHONPATH}:${EXTPREFIX}/lib/python${PYTHON_BUILD_VERSION}/site-packages")
++    endif()
+     message(STATUS "Krita's PEP-0250 root: ${KRITA_PYTHONPATH}")
+ endif ()
+-- 
+2.45.0

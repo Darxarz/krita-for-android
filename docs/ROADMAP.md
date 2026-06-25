@@ -42,6 +42,15 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191101042
 
 Это самый тяжелый этап.
 
+Первый найденный blocker: `krita_initialize_python.cmake` в upstream deps ожидает
+`lib/python3.13/site-packages`, а официальный Android Python package сейчас ставит
+`lib/python3.14`. Добавлен patch-кандидат, который переключает этот путь на 3.14 только
+для Android и добавляет host-version `site-packages` для build tools, установленных через
+host `python3`.
+
+Добавлен CI-кандидат `Krita deps Python tools Android`, который проверяет установку
+`ext_python`, `ext_sip` и `ext_pyqt-builder` в одном Android dependency prefix.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;
