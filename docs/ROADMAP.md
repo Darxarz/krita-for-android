@@ -48,8 +48,13 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191101042
 для Android и добавляет host-version `site-packages` для build tools, установленных через
 host `python3`.
 
-Добавлен CI-кандидат `Krita deps Python tools Android`, который проверяет установку
-`ext_python`, `ext_sip` и `ext_pyqt-builder` в одном Android dependency prefix.
+CI `Krita deps Python tools Android` теперь зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191619971
+
+Проверено: `ext_python`, `ext_sip` и `ext_pyqt-builder` устанавливаются в один Android
+dependency prefix для `arm64-v8a` и `x86_64`; `sipbuild` и `pyqtbuild` импортируются через
+host Python, а target `libpython3.14.so` остаётся в этом же prefix.
 
 Нужно разделить две роли Python:
 
