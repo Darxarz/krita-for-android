@@ -14,7 +14,7 @@ diff --git a/ext_python/CMakeLists.txt b/ext_python/CMakeLists.txt
 index 0000000..0000000 100644
 --- a/ext_python/CMakeLists.txt
 +++ b/ext_python/CMakeLists.txt
-@@ -75,8 +75,48 @@ if (UNIX)
+@@ -75,8 +75,50 @@ if (UNIX)
  
      else()
  
