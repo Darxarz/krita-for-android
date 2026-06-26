@@ -179,10 +179,28 @@ CI `Krita PyKrita top-level configure Android` зелёный.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28262441987
 
-Следующий слой: переход от object compile к настоящей линковке `PyKrita.krita`.
-Для этого уже недостаточно SIP/PyQt; нужны Android-built Krita libraries
-(`kritalibkis`, `kritaui`, `kritaimage`, `kritapigment` и зависимости), чтобы
-убрать compile-probe stubs и собрать реальный loadable Python extension.
+Следующий узкий слой: link smoke для обычного target `PyKrita.krita` без compile-only
+режима. Добавлен CI probe `Krita PyKrita SIP link smoke Android`. Он берёт зелёный
+`krita-deps-pyqt5-minimal-${abi}` artifact, применяет Krita patch-серию, собирает
+нормальный `python_module_PyKrita_krita` target и проверяет Android ELF `krita.so`.
+
+CI `Krita PyKrita SIP link smoke Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28264084186
+
+Проверено: `krita.so` собирается для `arm64-v8a` и `x86_64`, имеет правильный ELF
+machine type и NEEDED-зависимости на `libpython3.14.so`, `libQt5Core_${abi}.so`,
+`libQt5Gui_${abi}.so`, `libQt5Xml_${abi}.so` и `libQt5Widgets_${abi}.so`.
+
+Важно: это smoke-пробник, а не финальная runtime-сборка. В workflow пока остаются
+header-only/stub include surfaces и fake interface targets для Krita libraries; Android
+`--no-undefined` отключён только для этого smoke, поэтому unresolved Krita symbols
+ожидаемы до появления настоящих Android-built Krita shared libraries.
+
+Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
+недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,
+`kritaimage`, `kritapigment` и зависимости), чтобы убрать compile-probe stubs и собрать
+реальный loadable Python extension.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
