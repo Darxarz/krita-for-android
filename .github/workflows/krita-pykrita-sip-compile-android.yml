@@ -74,6 +74,10 @@ jobs:
           test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
           test -f "$prefix/lib/python3.14/site-packages/PyQt5/QtXml.cpython-314-${triplet}.so"
           test -f "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtXml/QtXml.toml"
+          test -d "$prefix/include/QtCore"
+          test -d "$prefix/include/QtGui"
+          test -d "$prefix/include/QtXml"
+          test -d "$prefix/include/QtWidgets"
 
       - name: Install host SIP tools
         run: |
@@ -148,7 +152,6 @@ jobs:
           set(KDE_INSTALL_LIBDIR "lib")
           set(QT_MAJOR_VERSION 5)
 
-          find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Xml Widgets)
           find_package(PythonLibrary 3.8 REQUIRED)
           find_package(SIP "4.19.13" REQUIRED)
           find_package(PyQt5 "5.6.0" REQUIRED)
@@ -172,6 +175,11 @@ jobs:
               "${KRITA_SOURCE_DIR}/libs/image/brushengine"
               "${KRITA_SOURCE_DIR}/libs/image/commands"
               "${KRITA_SOURCE_DIR}/libs/image/generator"
+              "${ANDROID_PREFIX}/include"
+              "${ANDROID_PREFIX}/include/QtCore"
+              "${ANDROID_PREFIX}/include/QtGui"
+              "${ANDROID_PREFIX}/include/QtXml"
+              "${ANDROID_PREFIX}/include/QtWidgets"
               "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings"
               "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtCore"
               "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtGui"
@@ -181,7 +189,12 @@ jobs:
           foreach(_target kritalibkis kritaui kritaimage kritalibbrush)
               add_library(${_target} INTERFACE)
               target_include_directories(${_target} INTERFACE ${_krita_probe_include_dirs})
-              target_link_libraries(${_target} INTERFACE Qt5::Core Qt5::Gui Qt5::Xml Qt5::Widgets)
+              target_compile_definitions(${_target} INTERFACE
+                  QT_CORE_LIB
+                  QT_GUI_LIB
+                  QT_XML_LIB
+                  QT_WIDGETS_LIB
+                  QT_NO_DEBUG)
           endforeach()
 
           add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/sip" pykrita-sip)
