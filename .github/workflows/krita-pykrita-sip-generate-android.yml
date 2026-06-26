@@ -119,3 +119,9 @@ jobs:
           test -f "$build_dir/pykrita-sip/_tmp/krita/sipkritapart0.cpp"
           test -f "$build_dir/pykrita-sip/_tmp/krita/krita_complete.pyi"
           grep -q "PyKrita" "$build_dir/pykrita-sip/_tmp/krita/sipkritapart0.cpp"
+
+      - name: Upload generated PyKrita SIP sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pykrita-sip-generated-${{ matrix.abi }}
+          path: build/pykrita-sip-generate/${{ matrix.abi }}/pykrita-sip/_tmp/krita

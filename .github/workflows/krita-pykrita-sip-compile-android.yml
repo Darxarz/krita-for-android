@@ -1,0 +1,208 @@
+name: Krita PyKrita SIP compile Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-pykrita-sip-compile-android.yml"
+      - "patches/krita/*.patch"
+
+jobs:
+  compile:
+    name: Compile PyKrita SIP ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential ninja-build libgl1-mesa-dev libxkbcommon-x11-0
+
+      - name: Download Android PyQt5 dependency prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-deps-pyqt5-minimal-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          mkdir -p "$prefix"
+          gh run download "$run_id" \
+            --name "krita-deps-pyqt5-minimal-${{ matrix.abi }}" \
+            --dir "$prefix"
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a) triplet="aarch64-linux-android" ;;
+            x86_64) triplet="x86_64-linux-android" ;;
+          esac
+
+          test -f "$prefix/include/python3.14/Python.h"
+          test -f "$prefix/lib/libpython3.14.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/QtXml.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtXml/QtXml.toml"
+
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            cmake/modules \
+            libs \
+            plugins/extensions/pykrita/sip
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Configure PyKrita SIP compile probe
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          generated_include="$GITHUB_WORKSPACE/build/pykrita-sip-compile/${{ matrix.abi }}/generated-includes"
+          mkdir -p "$generated_include" probe
+
+          for header in \
+            kritalibkis_export.h \
+            kritaflake_export.h \
+            kritawidgets_export.h \
+            kritabrush_export.h \
+            kritaui_export.h \
+            kritaresources_export.h \
+            kritapigment_export.h \
+            kritaglobal_export.h \
+            kritacommand_export.h; do
+            cat > "$generated_include/$header" <<'H'
+          #pragma once
+          #define KRITALIBKIS_EXPORT
+          #define KRITAFLAKE_EXPORT
+          #define KRITAWIDGETS_EXPORT
+          #define KRITABRUSH_EXPORT
+          #define KRITAUI_EXPORT
+          #define KRITARESOURCES_EXPORT
+          #define KRITAPIGMENT_EXPORT
+          #define KRITAGLOBAL_EXPORT
+          #define KRITACOMMAND_EXPORT
+          H
+          done
+
+          cat > probe/CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.21)
+          project(pykrita_sip_compile_probe CXX)
+
+          set(CMAKE_CXX_STANDARD 17)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+          set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
+          set(KRITA_ANDROID_PYKRITA_COMPILE_ONLY ON)
+          set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
+          set(CMAKE_PREFIX_PATH "${ANDROID_PREFIX}")
+          set(KDE_INSTALL_LIBDIR "lib")
+          set(QT_MAJOR_VERSION 5)
+
+          find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Xml Widgets)
+          find_package(PythonLibrary 3.8 REQUIRED)
+          find_package(SIP "4.19.13" REQUIRED)
+          find_package(PyQt5 "5.6.0" REQUIRED)
+
+          set(PYQT_VERSION_TAG ${PYQT5_VERSION_TAG})
+          set(PYQT_SIP_NAME ${PYQT5_SIP_NAME})
+          set(PYQT_SIP_TAGS ${PYQT5_SIP_TAGS})
+          set(PYQT_SIP_DIR ${PYQT5_SIP_DIR})
+
+          set(_krita_probe_include_dirs
+              "${GENERATED_INCLUDE_DIR}"
+              "${KRITA_SOURCE_DIR}"
+              "${KRITA_SOURCE_DIR}/libs/libkis"
+              "${KRITA_SOURCE_DIR}/libs/global"
+              "${KRITA_SOURCE_DIR}/libs/resources"
+              "${KRITA_SOURCE_DIR}/libs/pigment"
+              "${KRITA_SOURCE_DIR}/libs/brush"
+              "${KRITA_SOURCE_DIR}/libs/flake"
+              "${KRITA_SOURCE_DIR}/libs/widgets"
+              "${KRITA_SOURCE_DIR}/libs/image"
+              "${KRITA_SOURCE_DIR}/libs/image/brushengine"
+              "${KRITA_SOURCE_DIR}/libs/image/commands"
+              "${KRITA_SOURCE_DIR}/libs/image/generator"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtCore"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtGui"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtXml"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtWidgets")
+
+          foreach(_target kritalibkis kritaui kritaimage kritalibbrush)
+              add_library(${_target} INTERFACE)
+              target_include_directories(${_target} INTERFACE ${_krita_probe_include_dirs})
+              target_link_libraries(${_target} INTERFACE Qt5::Core Qt5::Gui Qt5::Xml Qt5::Widgets)
+          endforeach()
+
+          add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/sip" pykrita-sip)
+          CMAKE
+
+          cmake -S probe -B build/pykrita-sip-compile/${{ matrix.abi }} \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_STL=c++_shared \
+            -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
+            -DANDROID_PREFIX="$prefix" \
+            -DGENERATED_INCLUDE_DIR="$generated_include"
+
+      - name: Compile PyKrita SIP objects
+        run: |
+          set -eux
+
+          build_dir="build/pykrita-sip-compile/${{ matrix.abi }}"
+          cmake --build "$build_dir" --target python_module_PyKrita_krita_sip_objects --verbose
+
+      - name: Upload generated PyKrita SIP compile tree
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pykrita-sip-compile-tree-${{ matrix.abi }}
+          path: build/pykrita-sip-compile/${{ matrix.abi }}
