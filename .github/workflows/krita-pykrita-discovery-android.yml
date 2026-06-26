@@ -40,6 +40,7 @@ jobs:
           download_file cmake/modules/FindPythonLibrary.cmake
           download_file cmake/modules/FindSIP.cmake
           download_file cmake/modules/SIPMacros.cmake
+          download_file plugins/extensions/pykrita/CMakeLists.txt
 
       - name: Apply Krita patches
         run: |

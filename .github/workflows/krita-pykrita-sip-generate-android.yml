@@ -38,7 +38,7 @@ jobs:
           git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
             cmake/modules \
-            plugins/extensions/pykrita/sip
+            plugins/extensions/pykrita
 
       - name: Apply Krita patches
         run: |

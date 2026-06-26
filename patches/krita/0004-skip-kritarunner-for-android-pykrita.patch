@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 26 Jun 2026 00:00:00 +0000
+Subject: [PATCH] Skip kritarunner for Android PyKrita experiments
+
+The Android PyKrita path needs the embedded plugin and Python module, not the
+desktop script runner executable. Keep desktop builds unchanged while avoiding
+extra executable-only Qt/Krita dependencies in the Android experimental path.
+---
+diff --git a/plugins/extensions/pykrita/CMakeLists.txt b/plugins/extensions/pykrita/CMakeLists.txt
+index 3fb09d8..d706fc9 100644
+--- a/plugins/extensions/pykrita/CMakeLists.txt
++++ b/plugins/extensions/pykrita/CMakeLists.txt
+@@ -6,7 +6,9 @@ if (HAVE_PYQT${QT_MAJOR_VERSION} AND HAVE_SIP AND HAVE_PYTHONLIBS)
+         include_directories(${SIP_INCLUDE_DIR})
+     ENDIF(${SIP_VERSION_STR} VERSION_LESS 5)
+     add_subdirectory(sip)
+     add_subdirectory(plugin)
+-    add_subdirectory(kritarunner)
++    if (NOT ANDROID OR NOT ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++        add_subdirectory(kritarunner)
++    endif()
+ 
+ endif ()

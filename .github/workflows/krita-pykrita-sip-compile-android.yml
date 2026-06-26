@@ -96,7 +96,7 @@ jobs:
             CMakeLists.txt \
             cmake/modules \
             libs \
-            plugins/extensions/pykrita/sip
+            plugins/extensions/pykrita
 
       - name: Apply Krita patches
         run: |
