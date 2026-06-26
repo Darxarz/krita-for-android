@@ -198,6 +198,95 @@ jobs:
           H
           done
 
+          cat > "$generated_include/klocalizedstring.h" <<'H'
+          #pragma once
+
+          #include <QString>
+          #include <QStringList>
+
+          class KLocalizedString
+          {
+          public:
+              KLocalizedString() = default;
+              explicit KLocalizedString(const char *text)
+                  : m_text(QString::fromUtf8(text ? text : ""))
+              {
+              }
+              explicit KLocalizedString(const QString &text)
+                  : m_text(text)
+              {
+              }
+
+              QString toString() const
+              {
+                  return m_text;
+              }
+
+              operator QString() const
+              {
+                  return toString();
+              }
+
+              template <typename... Args>
+              KLocalizedString subs(Args &&...) const
+              {
+                  return *this;
+              }
+
+              static void setApplicationDomain(const char *)
+              {
+              }
+
+              static QStringList languages()
+              {
+                  return QStringList();
+              }
+
+              static QString removeAcceleratorMarker(const QString &text)
+              {
+                  return text;
+              }
+
+          private:
+              QString m_text;
+          };
+
+          inline KLocalizedString ki18n(const char *text)
+          {
+              return KLocalizedString(text);
+          }
+
+          inline KLocalizedString ki18nc(const char *, const char *text)
+          {
+              return KLocalizedString(text);
+          }
+
+          template <typename... Args>
+          inline QString i18n(const char *text, Args &&...)
+          {
+              return QString::fromUtf8(text ? text : "");
+          }
+
+          template <typename... Args>
+          inline QString i18nc(const char *, const char *text, Args &&...)
+          {
+              return QString::fromUtf8(text ? text : "");
+          }
+
+          template <typename... Args>
+          inline QString i18np(const char *singular, const char *, Args &&...)
+          {
+              return QString::fromUtf8(singular ? singular : "");
+          }
+
+          template <typename... Args>
+          inline QString i18ncp(const char *, const char *singular, const char *, Args &&...)
+          {
+              return QString::fromUtf8(singular ? singular : "");
+          }
+          H
+          cp "$generated_include/klocalizedstring.h" "$generated_include/KLocalizedString"
+
           ln -s /usr/include/boost "$generated_include/boost"
 
           cat > probe/CMakeLists.txt <<'CMAKE'
