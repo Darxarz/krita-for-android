@@ -126,6 +126,17 @@ CI `Krita PyKrita discovery Android` зелёный.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28237174393
 
+Следующий узкий слой: генерация SIP C++ для `PyKrita.krita` без компиляции всего модуля.
+Добавлен patch-кандидат `patches/krita/0002-add-android-pykrita-sip-generate-only.patch`,
+который вводит Android-only флаг `KRITA_ANDROID_PYKRITA_GENERATE_ONLY`. В этом режиме
+`SIPMacros.cmake` создаёт custom target генерации и не переходит к линковке
+`PyKrita.krita` с `kritalibkis`, `kritaui` и остальными Krita libraries.
+
+Добавлен CI probe `Krita PyKrita SIP generate Android`. Он берёт upstream Krita sparse
+checkout, применяет Krita patch-серию, устанавливает host `sip`/`PyQt5`, копирует PyQt5
+SIP bindings в fake Android prefix и запускает target
+`python_module_PyKrita_krita_sip_generate`.
+
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
 ## Phase 4 - APK packaging and runtime init

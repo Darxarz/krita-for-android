@@ -39,14 +39,17 @@ jobs:
           download_file cmake/modules/FindPyQt5.cmake
           download_file cmake/modules/FindPythonLibrary.cmake
           download_file cmake/modules/FindSIP.cmake
+          download_file cmake/modules/SIPMacros.cmake
 
       - name: Apply Krita patches
         run: |
           set -eux
 
           git -C upstream/krita init
-          git -C upstream/krita apply --check "$GITHUB_WORKSPACE/patches/krita/0001-enable-android-pykrita-discovery.patch"
-          git -C upstream/krita apply "$GITHUB_WORKSPACE/patches/krita/0001-enable-android-pykrita-discovery.patch"
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
 
       - name: Create fake Android Python and PyQt prefix
         run: |
