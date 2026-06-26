@@ -198,6 +198,8 @@ jobs:
           H
           done
 
+          ln -s /usr/include/boost "$generated_include/boost"
+
           cat > probe/CMakeLists.txt <<'CMAKE'
           cmake_minimum_required(VERSION 3.21)
           project(pykrita_sip_compile_probe CXX)
