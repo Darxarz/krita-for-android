@@ -324,31 +324,24 @@ jobs:
 
           set(_krita_probe_qt_libraries)
           foreach(_qt_module Core Gui Xml Widgets)
-              set(_qt_library_var "QT5_${_qt_module}_ANDROID_LIBRARY")
-              find_library(${_qt_library_var}
-                  NAMES "Qt5${_qt_module}_${ANDROID_ABI}" "Qt5${_qt_module}"
-                  PATHS "${ANDROID_PREFIX}/lib"
-                  NO_DEFAULT_PATH)
+              set(_qt_library
+                  "${ANDROID_PREFIX}/lib/libQt5${_qt_module}_${ANDROID_ABI}.so")
 
-              if(NOT ${_qt_library_var})
+              if(NOT EXISTS "${_qt_library}")
                   message(FATAL_ERROR
                       "Could not find Android Qt5${_qt_module} library under "
                       "${ANDROID_PREFIX}/lib")
               endif()
 
-              list(APPEND _krita_probe_qt_libraries "${${_qt_library_var}}")
+              list(APPEND _krita_probe_qt_libraries "${_qt_library}")
           endforeach()
-
-          find_library(_krita_probe_glesv2_library GLESv2 REQUIRED)
-          find_library(_krita_probe_log_library log REQUIRED)
-          find_library(_krita_probe_z_library z REQUIRED)
 
           add_library(krita_android_qt_dependencies INTERFACE)
           target_link_libraries(krita_android_qt_dependencies INTERFACE
               ${_krita_probe_qt_libraries}
-              ${_krita_probe_glesv2_library}
-              ${_krita_probe_log_library}
-              ${_krita_probe_z_library})
+              GLESv2
+              log
+              z)
 
           include_directories("${PYTHON_INCLUDE_DIRS}")
 
