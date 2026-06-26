@@ -104,12 +104,23 @@ runtime modules и SIP metadata достаточно полные, чтобы п
 
 ## Phase 3 - PyKrita в Android-сборке Krita
 
+Статус: начат patch-кандидат для upstream Krita.
+
 Нужно поправить CMake discovery:
 
 - `FindPythonLibrary.cmake` должен принимать target include/lib без target interpreter;
 - `FindPyQt5.cmake` не должен пытаться импортировать target Android PyQt на host runner;
 - `plugins/extensions/pykrita` должен собираться для Android только в экспериментальном
   режиме, например через `-DENABLE_ANDROID_PYKRITA_EXPERIMENTAL=ON`.
+
+Добавлен patch-кандидат `patches/krita/0001-enable-android-pykrita-discovery.patch`.
+Он вводит Android-only option `ENABLE_ANDROID_PYKRITA_EXPERIMENTAL` и ручной discovery
+target Python/PyQt5 из Android dependency prefix. Host Python по-прежнему используется
+только для запуска SIP tooling, а target Android `PyQt5.QtCore` не импортируется на host.
+
+Добавлен CI probe `Krita PyKrita discovery Android`. Он применяет Krita patch к upstream
+CMake-файлам и проверяет на fake Android prefix, что `PythonLibrary`, `SIP` и `PyQt5`
+находят target include/lib/site-packages/SIP metadata без запуска target extension modules.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
