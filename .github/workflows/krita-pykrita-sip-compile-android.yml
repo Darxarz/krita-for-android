@@ -245,6 +245,16 @@ jobs:
               "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtXml"
               "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtWidgets")
 
+          file(GLOB_RECURSE _krita_probe_lib_entries
+              LIST_DIRECTORIES true
+              "${KRITA_SOURCE_DIR}/libs/*")
+          foreach(_entry ${_krita_probe_lib_entries})
+              if(IS_DIRECTORY "${_entry}")
+                  list(APPEND _krita_probe_include_dirs "${_entry}")
+              endif()
+          endforeach()
+          list(REMOVE_DUPLICATES _krita_probe_include_dirs)
+
           foreach(_target kritalibkis kritaui kritaimage kritalibbrush)
               add_library(${_target} INTERFACE)
               target_include_directories(${_target} INTERFACE ${_krita_probe_include_dirs})
