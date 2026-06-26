@@ -7,6 +7,10 @@ on:
       - ".github/workflows/krita-pykrita-sip-compile-android.yml"
       - "patches/krita/*.patch"
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   compile:
     name: Compile PyKrita SIP ${{ matrix.abi }}
