@@ -120,7 +120,7 @@ jobs:
               ;;
           esac
 
-          for module_name in sip QtCore QtNetwork QtGui QtWidgets; do
+          for module_name in sip QtCore QtNetwork QtGui QtXml QtWidgets; do
             module="$prefix/lib/python3.14/site-packages/PyQt5/${module_name}.cpython-314-${triplet}.so"
             test -f "$module"
             file "$module"

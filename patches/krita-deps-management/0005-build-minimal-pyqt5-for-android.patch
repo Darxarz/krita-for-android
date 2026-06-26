@@ -27,7 +27,7 @@ index 0000000..0000000 100644
  
 +if(ANDROID)
 +    set(PYQT5_ANDROID_PYTHON_VERSION "3.14")
-+    set(PYQT5_ANDROID_BINDINGS QtCore QtNetwork QtGui QtWidgets)
++    set(PYQT5_ANDROID_BINDINGS QtCore QtNetwork QtGui QtXml QtWidgets)
 +
 +    if (ANDROID_ABI STREQUAL "arm64-v8a")
 +        set(PYQT5_ANDROID_TRIPLET "aarch64-linux-android")
@@ -228,7 +228,7 @@ index 0000000..0000000
 +    message(FATAL_ERROR "PyQt5 package directory was not found at ${pyqt_package_dir}")
 +endif()
 +
-+set(expected_modules QtCore QtNetwork QtGui QtWidgets)
++set(expected_modules QtCore QtNetwork QtGui QtXml QtWidgets)
 +
 +file(GLOB pyqt_host_named_modules
 +    "${pyqt_package_dir}/*.cpython-*.so"
