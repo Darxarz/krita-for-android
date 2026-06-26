@@ -137,6 +137,10 @@ checkout, применяет Krita patch-серию, устанавливает 
 SIP bindings в fake Android prefix и запускает target
 `python_module_PyKrita_krita_sip_generate`.
 
+CI `Krita PyKrita SIP generate Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28238236804
+
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
 ## Phase 4 - APK packaging and runtime init
