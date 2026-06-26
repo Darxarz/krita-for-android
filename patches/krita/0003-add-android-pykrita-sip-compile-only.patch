@@ -13,7 +13,7 @@ diff --git a/cmake/modules/SIPMacros.cmake b/cmake/modules/SIPMacros.cmake
 index 6eb7c18..c60d915 100644
 --- a/cmake/modules/SIPMacros.cmake
 +++ b/cmake/modules/SIPMacros.cmake
-@@ -243,9 +243,28 @@ else()
+@@ -243,9 +243,30 @@ else()
                  ${_sip_output_files} ${_complete_stubs}
          )
  
@@ -37,6 +37,8 @@ index 6eb7c18..c60d915 100644
 +                ${CMAKE_CURRENT_SIP_OUTPUT_DIR}
 +                ${PYTHON_INCLUDE_DIRS})
 +            target_link_libraries(${_logical_name}_sip_objects PRIVATE ${EXTRA_LINK_LIBRARIES})
++            target_compile_options(${_logical_name}_sip_objects PRIVATE
++                -fno-operator-names)
 +            target_compile_definitions(${_logical_name}_sip_objects PRIVATE
 +                SIP_PROTECTED_IS_PUBLIC
 +                protected=public)

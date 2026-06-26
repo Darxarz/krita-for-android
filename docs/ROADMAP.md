@@ -74,7 +74,7 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28192903905
 `0005-build-minimal-pyqt5-for-android.patch`, который вводит Android-only recipe для
 `ext_pyqt5`: `sip-build` получает target Python 3.14 настройки через `pyproject.toml`,
 использует Android `qmake`, явно включает только `QtCore`, `QtNetwork`, `QtGui` и
-`QtWidgets`, а после установки переименовывает host-style extension suffix в Android
+`QtXml` и `QtWidgets`, а после установки переименовывает host-style extension suffix в Android
 suffix `cpython-314-<triplet>`.
 
 Добавлен CI probe `Krita deps PyQt5 minimal Android`. Для скорости он подкладывает готовый
@@ -82,13 +82,15 @@ Qt for Android через `aqtinstall`, а затем собирает уже п
 пробует минимальный PyQt5 runtime. Это проверка сборочного рецепта; полноценная интеграция
 с upstream `ext_qt` остается отдельным шагом.
 
-CI `Krita deps PyQt5 minimal Android` зелёный.
+CI `Krita deps PyQt5 minimal Android` зелёный. После PyKrita SIP import analysis в
+минимальный набор добавлен `QtXml`, потому что upstream `kritamod.sip` импортирует
+`QtXml/QtXmlmod.sip`.
 
-Run: https://github.com/Darxarz/krita-for-android/actions/runs/28196914189
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28239107004
 
 Проверено: артефакты `krita-deps-pyqt5-minimal-arm64-v8a` и
 `krita-deps-pyqt5-minimal-x86_64` содержат Android target modules
-`PyQt5/sip.cpython-314-<triplet>.so`, `QtCore`, `QtNetwork`, `QtGui` и `QtWidgets`.
+`PyQt5/sip.cpython-314-<triplet>.so`, `QtCore`, `QtNetwork`, `QtGui`, `QtXml` и `QtWidgets`.
 Workflow проверяет ELF machine type, зависимость от `libpython3.14.so` и наличие SIP
 metadata `PyQt5/bindings/QtCore/QtCore.toml`.
 
@@ -124,7 +126,7 @@ CMake-файлам и проверяет на fake Android prefix, что `Pytho
 
 CI `Krita PyKrita discovery Android` зелёный.
 
-Run: https://github.com/Darxarz/krita-for-android/actions/runs/28237174393
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28259537561
 
 Следующий узкий слой: генерация SIP C++ для `PyKrita.krita` без компиляции всего модуля.
 Добавлен patch-кандидат `patches/krita/0002-add-android-pykrita-sip-generate-only.patch`,
@@ -139,7 +141,34 @@ SIP bindings в fake Android prefix и запускает target
 
 CI `Krita PyKrita SIP generate Android` зелёный.
 
-Run: https://github.com/Darxarz/krita-for-android/actions/runs/28238236804
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28259537548
+
+Следующий узкий слой: компиляция generated SIP C++ object files Android clang'ом без
+линковки финального Python module. Добавлен patch-кандидат
+`patches/krita/0003-add-android-pykrita-sip-compile-only.patch`, который вводит
+Android-only флаг `KRITA_ANDROID_PYKRITA_COMPILE_ONLY`. В этом режиме
+`SIPMacros.cmake` создаёт object library
+`python_module_PyKrita_krita_sip_objects`, подключает target Python headers,
+PyQt/Krita usage requirements, `SIP_PROTECTED_IS_PUBLIC` и Android-safe
+`-fno-operator-names`.
+
+Добавлен CI probe `Krita PyKrita SIP compile Android`. Он использует уже зелёный
+артефакт `krita-deps-pyqt5-minimal-${abi}`, применяет Krita patch-серию, генерирует
+SIP sources и компилирует `sipkritapart0.cpp` для `arm64-v8a` и `x86_64`.
+
+CI `Krita PyKrita SIP compile Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28261664383
+
+Проверено: Android clang компилирует generated PyKrita SIP C++ против Python 3.14,
+PyQt5 (`QtCore`, `QtGui`, `QtXml`, `QtWidgets`) и заголовков Krita. Для narrow probe
+в workflow временно добавлены header-only/stub include surfaces для Boost, Eigen,
+Krita generated config/export headers и KDE `KLocalizedString`.
+
+Следующий слой: переход от object compile к настоящей линковке `PyKrita.krita`.
+Для этого уже недостаточно SIP/PyQt; нужны Android-built Krita libraries
+(`kritalibkis`, `kritaui`, `kritaimage`, `kritapigment` и зависимости), чтобы
+убрать compile-probe stubs и собрать реальный loadable Python extension.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 

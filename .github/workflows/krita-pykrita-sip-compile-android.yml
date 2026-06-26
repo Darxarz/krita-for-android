@@ -296,7 +296,6 @@ jobs:
 
           set(CMAKE_CXX_STANDARD 17)
           set(CMAKE_CXX_STANDARD_REQUIRED ON)
-          add_compile_options(-fno-operator-names)
           set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
           set(KRITA_ANDROID_PYKRITA_COMPILE_ONLY ON)
           set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
