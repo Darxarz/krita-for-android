@@ -165,6 +165,20 @@ PyQt5 (`QtCore`, `QtGui`, `QtXml`, `QtWidgets`) и заголовков Krita. �
 в workflow временно добавлены header-only/stub include surfaces для Boost, Eigen,
 Krita generated config/export headers и KDE `KLocalizedString`.
 
+Следующий узкий слой: конфигурация родительского `plugins/extensions/pykrita` без
+desktop-only `kritarunner`. Добавлен patch-кандидат
+`patches/krita/0004-skip-kritarunner-for-android-pykrita.patch`: в Android experimental
+режиме остаются `sip` и embedded `plugin`, но не создаётся отдельный runner executable.
+
+Добавлен CI probe `Krita PyKrita top-level configure Android`. Он проходит через
+родительский `plugins/extensions/pykrita/CMakeLists.txt` с fake Android Python/PyQt
+prefix и проверяет, что targets `python_module_PyKrita_krita_sip_generate`, `pykrita`
+и `kritapykrita` создаются, а `kritarunner` пропускается.
+
+CI `Krita PyKrita top-level configure Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28262441987
+
 Следующий слой: переход от object compile к настоящей линковке `PyKrita.krita`.
 Для этого уже недостаточно SIP/PyQt; нужны Android-built Krita libraries
 (`kritalibkis`, `kritaui`, `kritaimage`, `kritapigment` и зависимости), чтобы
