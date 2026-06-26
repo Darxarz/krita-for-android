@@ -309,7 +309,9 @@ jobs:
           set(QT_MAJOR_VERSION 5)
 
           foreach(_linker_flag_var CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
-              string(REPLACE "-Wl,--no-undefined" "" ${_linker_flag_var} "${${_linker_flag_var}}")
+              separate_arguments(_linker_flags NATIVE_COMMAND "${${_linker_flag_var}}")
+              list(REMOVE_ITEM _linker_flags "-Wl,--no-undefined")
+              string(JOIN " " ${_linker_flag_var} ${_linker_flags})
           endforeach()
 
           find_package(PythonLibrary 3.8 REQUIRED)
