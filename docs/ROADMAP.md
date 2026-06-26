@@ -122,6 +122,10 @@ target Python/PyQt5 из Android dependency prefix. Host Python по-прежн�
 CMake-файлам и проверяет на fake Android prefix, что `PythonLibrary`, `SIP` и `PyQt5`
 находят target include/lib/site-packages/SIP metadata без запуска target extension modules.
 
+CI `Krita PyKrita discovery Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28237174393
+
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
 ## Phase 4 - APK packaging and runtime init
