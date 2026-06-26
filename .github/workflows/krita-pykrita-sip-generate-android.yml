@@ -35,7 +35,7 @@ jobs:
           set -eux
 
           git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
-          git -C upstream/krita sparse-checkout set \
+          git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
             cmake/modules \
             plugins/extensions/pykrita/sip
