@@ -175,6 +175,29 @@ jobs:
           H
           done
 
+          for header in \
+            KoConfig.h \
+            config-android-stdio-forwarding.h \
+            config-debug.h \
+            config-gsl.h \
+            config-hash-table-implementation.h \
+            config-hdr.h \
+            config-limit-long-tests.h \
+            config-memory-leak-tracker.h \
+            config-mlt.h \
+            config-ocio.h \
+            config-qmdiarea-always-show-subwindow-title.h \
+            config-qt-patches-present.h \
+            config-safe-asserts.h \
+            config-seexpr.h \
+            config-updaters.h \
+            config-use-surface-color-management-api.h \
+            config-xmlgui.h; do
+            cat > "$generated_include/$header" <<'H'
+          #pragma once
+          H
+          done
+
           cat > probe/CMakeLists.txt <<'CMAKE'
           cmake_minimum_required(VERSION 3.21)
           project(pykrita_sip_compile_probe CXX)
