@@ -116,26 +116,62 @@ jobs:
           mkdir -p "$generated_include" probe
 
           for header in \
+            dummytrivialinterface_export.h \
+            kis_image_export.h \
+            kritabasicflakes_export.h \
             kritalibkis_export.h \
             kritaflake_export.h \
             kritawidgets_export.h \
             kritabrush_export.h \
+            kritacolor_export.h \
+            kritacolord_export.h \
             kritaui_export.h \
-            kritaresources_export.h \
+            kritaimage_export.h \
+            kritaimpex_export.h \
+            kritametadata_export.h \
+            kritamultiarch_export.h \
             kritapigment_export.h \
+            kritaplugin_export.h \
+            kritapsd_export.h \
+            kritapsdutils_export.h \
+            kritaresources_export.h \
+            kritaresourcewidgets_export.h \
+            kritastore_export.h \
+            kritasurfacecolormanagementapi_export.h \
             kritaglobal_export.h \
-            kritacommand_export.h; do
+            kritacommand_export.h \
+            kritaversion_export.h \
+            kritawidgetutils_export.h; do
             cat > "$generated_include/$header" <<'H'
           #pragma once
+          #define DUMMYTRIVIALINTERFACE_EXPORT
+          #define KIS_IMAGE_EXPORT
+          #define KRITABASICFLAKES_EXPORT
           #define KRITALIBKIS_EXPORT
           #define KRITAFLAKE_EXPORT
           #define KRITAWIDGETS_EXPORT
           #define KRITABRUSH_EXPORT
+          #define KRITACOLOR_EXPORT
+          #define KRITACOLORD_EXPORT
           #define KRITAUI_EXPORT
-          #define KRITARESOURCES_EXPORT
+          #define KRITAIMAGE_EXPORT
+          #define KRITAIMAGE_EXPORT_TEMPLATE
+          #define KRITAIMAGE_EXPORT_INSTANCE
+          #define KRITAIMPEX_EXPORT
+          #define KRITAMETADATA_EXPORT
+          #define KRITAMULTIARCH_EXPORT
           #define KRITAPIGMENT_EXPORT
+          #define KRITAPLUGIN_EXPORT
+          #define KRITAPSD_EXPORT
+          #define KRITAPSDUTILS_EXPORT
+          #define KRITARESOURCES_EXPORT
+          #define KRITARESOURCEWIDGETS_EXPORT
+          #define KRITASTORE_EXPORT
+          #define KRITASURFACECOLORMANAGEMENTAPI_EXPORT
           #define KRITAGLOBAL_EXPORT
           #define KRITACOMMAND_EXPORT
+          #define KRITAVERSION_EXPORT
+          #define KRITAWIDGETUTILS_EXPORT
           H
           done
 
