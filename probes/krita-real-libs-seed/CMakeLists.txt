@@ -2552,6 +2552,7 @@ target_include_directories(kritapigment
         "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/pigment/compositeops>"
         "$<BUILD_INTERFACE:${_kritapigment_build_dir}>"
     PRIVATE
+        "${KRITA_SOURCE_DIR}"
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
 target_compile_definitions(kritapigment PRIVATE
