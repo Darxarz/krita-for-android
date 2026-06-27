@@ -246,9 +246,13 @@ set(Qt5Core_VERSION_MINOR 15)
 set(Qt5Core_VERSION_PATCH 2)
 set(Qt5Core_MOC_EXECUTABLE "${_qt5_moc_executable}")
 set_property(TARGET Qt5::Core PROPERTY INTERFACE_QT_MAJOR_VERSION 5)
+set(Qt5Core_PRIVATE_INCLUDE_DIRS
+    "${ANDROID_PREFIX}/include/QtCore/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}"
+    "${ANDROID_PREFIX}/include/QtCore/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}/QtCore")
 set(Qt5Gui_PRIVATE_INCLUDE_DIRS
     "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}"
-    "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}/QtGui")
+    "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}/QtGui"
+    ${Qt5Core_PRIVATE_INCLUDE_DIRS})
 
 set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
@@ -555,7 +559,17 @@ public:
         return false;
     }
 
+    bool isValid() const
+    {
+        return true;
+    }
+
     bool hasGroup(const QString &) const
+    {
+        return false;
+    }
+
+    bool hasDefault(const QString &) const
     {
         return false;
     }
@@ -579,6 +593,10 @@ public:
     }
 
     void deleteGroup()
+    {
+    }
+
+    void revertToDefault(const QString &)
     {
     }
 
