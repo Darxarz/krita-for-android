@@ -95,7 +95,10 @@ jobs:
         run: |
           set -eux
 
-          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          if ! git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita; then
+            rm -rf upstream/krita
+            git clone --depth 1 --filter=blob:none --sparse https://github.com/KDE/krita.git upstream/krita
+          fi
           git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
             KoConfig.h.cmake \
