@@ -287,6 +287,13 @@ else()
     message(FATAL_ERROR "Missing xsimd headers from libxsimd-dev")
 endif()
 
+if(EXISTS "/usr/include/fontconfig")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink
+        "/usr/include/fontconfig" "${_external_include_dir}/fontconfig")
+else()
+    message(FATAL_ERROR "Missing fontconfig headers from libfontconfig1-dev")
+endif()
+
 file(WRITE "${_external_include_dir}/klocalizedstring.h" [=[
 #pragma once
 
