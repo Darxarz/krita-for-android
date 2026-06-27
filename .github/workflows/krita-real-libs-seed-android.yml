@@ -111,6 +111,7 @@ jobs:
             libs/global \
             libs/koplugin \
             libs/multiarch \
+            libs/pigment \
             libs/resources \
             libs/store \
             libs/version \
@@ -159,6 +160,7 @@ jobs:
             kritaresources \
             kritawidgetutils \
             kritacommand \
+            kritapigment \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -170,6 +172,7 @@ jobs:
           resources_library="$(find "$build_dir" -name 'libkritaresources.so' -print -quit)"
           widgetutils_library="$(find "$build_dir" -name 'libkritawidgetutils.so' -print -quit)"
           command_library="$(find "$build_dir" -name 'libkritacommand.so' -print -quit)"
+          pigment_library="$(find "$build_dir" -name 'libkritapigment.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -179,6 +182,7 @@ jobs:
           test -n "$resources_library"
           test -n "$widgetutils_library"
           test -n "$command_library"
+          test -n "$pigment_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -188,6 +192,7 @@ jobs:
           file "$resources_library"
           file "$widgetutils_library"
           file "$command_library"
+          file "$pigment_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -290,6 +295,23 @@ jobs:
 
           "$readelf" -Ws "$command_library" | tee "$RUNNER_TEMP/kritacommand-symbols.txt"
           grep -q "KUndo2Stack" "$RUNNER_TEMP/kritacommand-symbols.txt"
+
+          "$readelf" -h "$pigment_library" | tee "$RUNNER_TEMP/kritapigment-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritapigment-elf-header.txt"
+
+          "$readelf" -d "$pigment_library" | tee "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritaplugin.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritastore.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritaresources.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritacommand.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libkritamultiarch.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Xml_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritapigment-dynamic.txt"
+
+          "$readelf" -Ws "$pigment_library" | tee "$RUNNER_TEMP/kritapigment-symbols.txt"
+          grep -q "KoColorSpaceRegistry" "$RUNNER_TEMP/kritapigment-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

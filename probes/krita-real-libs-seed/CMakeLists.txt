@@ -59,6 +59,13 @@ endmacro()
 macro(kis_add_test)
 endmacro()
 
+function(disable_seed_subdir relative_dir)
+    set(_subdir_cmake "${KRITA_SOURCE_DIR}/${relative_dir}/CMakeLists.txt")
+    if(EXISTS "${_subdir_cmake}")
+        file(WRITE "${_subdir_cmake}" "# Disabled by the Android real-libs seed probe.\n")
+    endif()
+endfunction()
+
 function(qt_add_resources out_var)
     set(_generated_resources "")
 
@@ -2301,6 +2308,61 @@ set_target_properties(Eigen3::Eigen PROPERTIES
 add_library(xsimd INTERFACE)
 target_include_directories(xsimd INTERFACE "${_external_include_dir}")
 
+function(seed_xsimd_compile_one out_var source implementation)
+    get_filename_component(_source_name "${source}" NAME_WE)
+    get_filename_component(_source_ext "${source}" EXT)
+    string(REPLACE "+" "_plus_" _safe_implementation "${implementation}")
+    set(_generated_source "${CMAKE_CURRENT_BINARY_DIR}/${_source_name}_${_safe_implementation}${_source_ext}")
+
+    add_custom_command(
+        OUTPUT "${_generated_source}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${source}" "${_generated_source}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${source}"
+        VERBATIM)
+
+    set(_compile_flags "")
+    if(implementation STREQUAL "SSE2")
+        set(_compile_flags "-msse2")
+    elseif(implementation STREQUAL "SSSE3")
+        set(_compile_flags "-mssse3")
+    elseif(implementation STREQUAL "SSE4_1")
+        set(_compile_flags "-msse4.1")
+    elseif(implementation STREQUAL "AVX")
+        set(_compile_flags "-mavx")
+    elseif(implementation STREQUAL "AVX2+FMA")
+        set(_compile_flags "-mavx2 -mfma")
+    endif()
+
+    set_source_files_properties("${_generated_source}" PROPERTIES
+        COMPILE_DEFINITIONS "XSIMD_IMPL=${implementation}"
+        COMPILE_FLAGS "${_compile_flags}"
+        SKIP_PRECOMPILE_HEADERS TRUE)
+
+    set(${out_var} ${${out_var}} "${_generated_source}" PARENT_SCOPE)
+endfunction()
+
+function(seed_xsimd_compile_for_all_implementations out_var source)
+    set(_implementations ${ARGN})
+    foreach(_implementation IN LISTS _implementations)
+        seed_xsimd_compile_one(_generated_sources "${source}" "${_implementation}")
+    endforeach()
+
+    set(${out_var} ${${out_var}} ${_generated_sources} PARENT_SCOPE)
+endfunction()
+
+macro(ko_compile_for_all_implementations_no_scalar _objs _src)
+    if(ANDROID_ABI STREQUAL "arm64-v8a")
+        seed_xsimd_compile_for_all_implementations(${_objs} ${_src} NEON64)
+    elseif(ANDROID_ABI STREQUAL "x86_64")
+        seed_xsimd_compile_for_all_implementations(${_objs} ${_src} SSE2 SSSE3 SSE4_1 AVX AVX2+FMA)
+    endif()
+endmacro()
+
+macro(ko_compile_for_all_implementations _objs _src)
+    seed_xsimd_compile_for_all_implementations(${_objs} ${_src} Scalar)
+    ko_compile_for_all_implementations_no_scalar(${_objs} ${_src})
+endmacro()
+
 add_library(lager INTERFACE)
 target_include_directories(lager INTERFACE "${_external_include_dir}")
 
@@ -2475,4 +2537,22 @@ target_include_directories(kritacommand
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
 target_compile_definitions(kritacommand PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/pigment)
+disable_seed_subdir(libs/pigment/benchmarks)
+
+set(_kritapigment_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritapigment")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/pigment" "${_kritapigment_build_dir}")
+
+target_include_directories(kritapigment
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/pigment>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/pigment/resources>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/pigment/compositeops>"
+        "$<BUILD_INTERFACE:${_kritapigment_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritapigment PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
