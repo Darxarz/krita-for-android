@@ -216,7 +216,7 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28293224421
 
 Следующий узкий слой: первые настоящие Krita shared libraries для Android. Добавлен
 CI probe `Krita real libs seed Android`. Он берёт уже зелёный Android PyQt5 prefix,
-импортирует Android Qt5 Core/Gui/Widgets/Xml/AndroidExtras и напрямую собирает upstream
+импортирует Android Qt5 Core/Gui/Widgets/Xml/Sql/PrintSupport/AndroidExtras и напрямую собирает upstream
 `libs/version/CMakeLists.txt` как реальную `libkritaversion.so`, а также upstream
 `libs/global/CMakeLists.txt` как реальную `libkritaglobal.so`.
 
@@ -246,10 +246,23 @@ CI `Krita real libs seed Android` зелёный.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28298474948
 
-Следующий слой: собрать следующий dependency cluster перед настоящей линковкой
-`PyKrita.krita`: `kritaresources`, затем `kritawidgetutils` и `kritacommand`. Это
-нужно, чтобы постепенно убрать compile-probe stubs и приблизиться к Android-built цепочке
-`kritalibkis` -> `kritaui` -> `kritaimage` -> `PyKrita.krita`.
+Следующий dependency cluster тоже закрыт в этом probe: upstream `libs/resources`,
+`libs/widgetutils` и `libs/command` собираются как реальные Android shared libraries
+`libkritaresources.so`, `libkritawidgetutils.so` и `libkritacommand.so`. Для этого seed
+добавляет минимальную generated surface для оставшихся KF5/XMLGUI/lager/QuaZip API, но
+исходники трёх библиотек берутся напрямую из upstream Krita.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости новых библиотек на Android Qt5
+и предыдущие real seed libraries, а также exported symbols `KisResourceLocator`,
+`KisActionRegistry` и `KUndo2Stack`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28301018937
+
+Следующий слой: продолжить real-library цепочку к зависимостям `PyKrita.krita`, начиная с
+`kritalibbrush`/`kritapigment`/`kritaimage` и дальше к `kritalibkis` -> `kritaui` ->
+`PyKrita.krita`.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 

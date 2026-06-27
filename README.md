@@ -27,7 +27,8 @@
 - `.github/workflows/krita-real-libs-seed-android.yml` - собирает первые настоящие
   upstream-библиотеки Krita для Android: `libkritaversion.so`, `libkritaglobal.so`,
   `libkritaplugin.so`, `libkritamultiarch.so`, `libkritacolor.so` и
-  `libkritastore.so`.
+  `libkritastore.so`, `libkritaresources.so`, `libkritawidgetutils.so` и
+  `libkritacommand.so`.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.
