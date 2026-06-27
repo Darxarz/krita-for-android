@@ -1966,6 +1966,8 @@ template <typename T, typename Tag = automatic_tag>
 class state
 {
 public:
+    using value_type = T;
+
     state() = default;
     explicit state(const T &value)
         : m_value(value)
@@ -1986,10 +1988,83 @@ private:
     T m_value {};
 };
 
+} // namespace lager
+]=])
+
+file(WRITE "${_external_include_dir}/lager/cursor.hpp" [=[
+#pragma once
+
+#include <functional>
+#include <type_traits>
+#include <utility>
+
+#include "lenses.hpp"
+#include "state.hpp"
+
+namespace lager {
+
+template <typename T>
+class cursor
+{
+public:
+    using value_type = T;
+
+    cursor() = default;
+    explicit cursor(const T &value)
+        : m_value(value)
+    {
+    }
+
+    template <typename Tag>
+    explicit cursor(const state<T, Tag> &state)
+        : m_value(state.get())
+    {
+    }
+
+    T get() const
+    {
+        return m_value;
+    }
+
+    void set(const T &value)
+    {
+        m_value = value;
+    }
+
+    template <typename Member>
+    auto operator[](Member T::*member) const -> cursor<std::decay_t<Member>>
+    {
+        return cursor<std::decay_t<Member>>(m_value.*member);
+    }
+
+    template <typename Lens>
+    auto zoom(const Lens &lens) const -> cursor<std::decay_t<decltype(lens.get(std::declval<const T &>()))>>
+    {
+        using Result = std::decay_t<decltype(lens.get(std::declval<const T &>()))>;
+        return cursor<Result>(lens.get(m_value));
+    }
+
+private:
+    T m_value {};
+};
+
+template <typename T, typename Tag = automatic_tag>
+cursor<T> make_state(const T &value, Tag = automatic_tag {})
+{
+    return cursor<T>(value);
+}
+
+template <typename Cursor, typename Func>
+void watch(const Cursor &, Func &&)
+{
+}
+
 template <typename T>
 class qt_cursor
 {
 public:
+    using value_type = T;
+
     qt_cursor() = default;
 
     template <typename State>
@@ -2024,12 +2099,28 @@ private:
 file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
 #pragma once
 
-#include "../state.hpp"
+#include "../cursor.hpp"
 
 #define LAGER_QT_CURSOR(type, name) \
     lager::qt_cursor<type> name; \
     void set##name(const type &value) { name.set(value); }
 #define LAGER_QT(name) name
+]=])
+
+file(WRITE "${_external_include_dir}/lager/constant.hpp" [=[
+#pragma once
+
+#include "cursor.hpp"
+
+namespace lager {
+
+template <typename T>
+cursor<T> make_constant(const T &value)
+{
+    return cursor<T>(value);
+}
+
+} // namespace lager
 ]=])
 
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
@@ -2040,6 +2131,8 @@ namespace lager {
 template <typename T>
 class reader
 {
+public:
+    using value_type = T;
 };
 
 template <typename... Args>
@@ -2065,6 +2158,8 @@ with_result<Args...> with(Args &&...)
 file(WRITE "${_external_include_dir}/lager/lenses.hpp" [=[
 #pragma once
 
+#include <utility>
+
 namespace lager {
 namespace lenses {
 
@@ -2073,12 +2168,51 @@ struct getset_lens
 {
     Getter getter;
     Setter setter;
+
+    template <typename Source>
+    decltype(auto) get(Source &&source) const
+    {
+        return getter(std::forward<Source>(source));
+    }
+
+    template <typename Source, typename Value>
+    decltype(auto) set(Source &&source, Value &&value) const
+    {
+        return setter(std::forward<Source>(source), std::forward<Value>(value));
+    }
 };
 
 template <typename Getter, typename Setter>
 getset_lens<Getter, Setter> getset(Getter getter, Setter setter)
 {
     return {getter, setter};
+}
+
+template <typename Lhs, typename Rhs>
+struct composed_lens
+{
+    Lhs lhs;
+    Rhs rhs;
+
+    template <typename Source>
+    decltype(auto) get(Source &&source) const
+    {
+        return rhs.get(lhs.get(std::forward<Source>(source)));
+    }
+
+    template <typename Source, typename Value>
+    decltype(auto) set(Source &&source, Value &&value) const
+    {
+        auto lhsValue = lhs.get(source);
+        auto rhsValue = rhs.set(lhsValue, std::forward<Value>(value));
+        return lhs.set(std::forward<Source>(source), rhsValue);
+    }
+};
+
+template <typename Lhs, typename Rhs>
+composed_lens<Lhs, Rhs> operator|(Lhs lhs, Rhs rhs)
+{
+    return {lhs, rhs};
 }
 
 } // namespace lenses
