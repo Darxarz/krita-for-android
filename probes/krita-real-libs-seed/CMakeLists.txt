@@ -875,6 +875,48 @@ file(WRITE "${_external_include_dir}/KMessageBox" [=[
 #include "kmessagebox.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kpagedialog.h" [=[
+#pragma once
+
+#include <QDialog>
+#include <QString>
+#include <QWidget>
+
+class KPageDialog : public QDialog
+{
+public:
+    enum FaceType {
+        Auto,
+        Plain,
+        List,
+        Tree,
+        Tabbed
+    };
+
+    enum DialogCode {
+        Rejected = QDialog::Rejected,
+        Accepted = QDialog::Accepted
+    };
+
+    explicit KPageDialog(QWidget *parent = nullptr)
+        : QDialog(parent)
+    {
+    }
+
+    void setFaceType(FaceType)
+    {
+    }
+
+    void addPage(QWidget *, const QString &)
+    {
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KPageDialog" [=[
+#pragma once
+#include "kpagedialog.h"
+]=])
+
 file(WRITE "${_external_include_dir}/ktitlewidget.h" [=[
 #pragma once
 
