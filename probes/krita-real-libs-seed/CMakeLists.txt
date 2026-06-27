@@ -565,6 +565,8 @@ target_include_directories(kritaglobal
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
+target_compile_definitions(kritaglobal PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritaglobal PRIVATE
     -include "${_external_include_dir}/gsl/gsl_multimin.h")
 
@@ -578,6 +580,7 @@ add_custom_command(
         -DQT_XML_LIB
         -DQT_ANDROIDEXTRAS_LIB
         -DQT_NO_DEBUG
+        -DQT_NO_SIGNALS_SLOTS_KEYWORDS
         -Dkritaglobal_EXPORTS
         -I"${KRITA_SOURCE_DIR}/libs/global"
         -I"${_kritaglobal_build_dir}"
