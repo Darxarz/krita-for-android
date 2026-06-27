@@ -535,6 +535,10 @@ public:
     {
     }
 
+    void deleteGroup()
+    {
+    }
+
     void sync()
     {
     }
