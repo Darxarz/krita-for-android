@@ -210,6 +210,10 @@ Krita, применяет patch-серию и читает CMake-файлы `PyK
 `kritawidgets` и `kritawidgetutils`, плюс внешняя поверхность Qt5/KF5, PNG,
 Eigen, Boost, FFTW, GLESv3 и lager.
 
+CI `Krita PyKrita link inventory` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28293224421
+
 Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
 недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,
 `kritaimage`, `kritapigment` и зависимости), чтобы убрать compile-probe stubs и собрать
