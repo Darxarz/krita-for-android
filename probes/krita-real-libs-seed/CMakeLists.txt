@@ -141,6 +141,11 @@ public:
         return m_text;
     }
 
+    bool isEmpty() const
+    {
+        return m_text.isEmpty();
+    }
+
     operator QString() const
     {
         return toString();
