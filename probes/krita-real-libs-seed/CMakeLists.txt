@@ -2559,3 +2559,18 @@ target_compile_definitions(kritapigment PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritapigment PRIVATE
     -fno-operator-names)
+
+disable_seed_tests(libs/metadata)
+
+set(_kritametadata_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritametadata")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/metadata" "${_kritametadata_build_dir}")
+
+target_include_directories(kritametadata
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/metadata>"
+        "$<BUILD_INTERFACE:${_kritametadata_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritametadata PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
