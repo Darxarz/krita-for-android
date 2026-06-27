@@ -781,6 +781,7 @@ file(WRITE "${_external_include_dir}/kmessagebox.h" [=[
 #include <QString>
 #include <QWidget>
 #include "kguiitem.h"
+#include "kstandardguiitem.h"
 
 namespace KMessageBox {
 
