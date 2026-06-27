@@ -197,6 +197,19 @@ header-only/stub include surfaces и fake interface targets для Krita librari
 `--no-undefined` отключён только для этого smoke, поэтому unresolved Krita symbols
 ожидаемы до появления настоящих Android-built Krita shared libraries.
 
+Следующий узкий слой: инвентаризация настоящей link surface перед real-link сборкой.
+Добавлен CI probe `Krita PyKrita link inventory`. Он берёт sparse checkout upstream
+Krita, применяет patch-серию и читает CMake-файлы `PyKrita.krita`, `kritalibkis`,
+`kritaui`, `kritaimage` и `kritalibbrush`, чтобы получить Android Qt5 минимум без
+полной сборки Krita.
+
+Проверено локально: для первого real-link шага нужны Krita libraries
+`kritalibkis`, `kritaui`, `kritaimage`, `kritalibbrush`, `kritacolor`,
+`kritacommand`, `kritaglobal`, `kritaimpex`, `kritametadata`, `kritamultiarch`,
+`kritapigment`, `kritapsdutils`, `kritaresources`, `kritaversion`,
+`kritawidgets` и `kritawidgetutils`, плюс внешняя поверхность Qt5/KF5, PNG,
+Eigen, Boost, FFTW, GLESv3 и lager.
+
 Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
 недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,
 `kritaimage`, `kritapigment` и зависимости), чтобы убрать compile-probe stubs и собрать
