@@ -574,6 +574,10 @@ public:
     {
     }
 
+    void deleteEntry(const QString &, WriteConfigFlags)
+    {
+    }
+
     void deleteGroup()
     {
     }
@@ -1556,6 +1560,10 @@ public:
     }
 
     static void last_manage(QWidget *, QWidget *, const QString &)
+    {
+    }
+
+    static void last_manage(QString &, QString &, QString &)
     {
     }
 };
