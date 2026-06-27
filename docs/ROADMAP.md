@@ -214,6 +214,18 @@ CI `Krita PyKrita link inventory` зелёный.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28293224421
 
+Следующий узкий слой: первая настоящая Krita shared library для Android. Добавлен
+CI probe `Krita real libs seed Android`. Он берёт уже зелёный Android PyQt5 prefix,
+импортирует `Qt5::Core` из `libQt5Core_${abi}.so` и напрямую собирает upstream
+`libs/version/CMakeLists.txt` как реальную `libkritaversion.so`.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимость на Android `Qt5Core` и
+экспортированный `KritaVersionWrapper::versionString` symbol.
+
+CI `Krita real libs seed Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28294360136
+
 Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
 недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,
 `kritaimage`, `kritapigment` и зависимости), чтобы убрать compile-probe stubs и собрать
