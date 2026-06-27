@@ -274,10 +274,22 @@ CI `Krita real libs seed Android` зелёный для этого слоя.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28302430361
 
+Еще один compact prerequisite для `kritaimage` закрыт: upstream `libs/metadata`
+собирается как реальная Android shared library `libkritametadata.so`. Seed отключает
+tests, подключает upstream target напрямую и проверяет, что библиотека линкуется с уже
+собранными real seed libraries.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости `libkritametadata.so` на
+`libkritaglobal.so`, `libkritaplugin.so`, `libkritawidgetutils.so` и Android Qt5 Core, а
+также exported symbols из namespace `KisMetaData`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28303022560
+
 Следующий слой: продолжить real-library цепочку к зависимостям `PyKrita.krita`, начиная с
-оставшихся prerequisites для `kritaimage` (`kritawidgets`, `kritapsdutils`,
-`kritametadata`), затем `kritaimage`, `kritalibbrush` и дальше к `kritalibkis` ->
-`kritaui` -> `PyKrita.krita`.
+оставшихся prerequisites для `kritaimage` (`kritawidgets`, `kritapsdutils`), затем
+`kritaimage`, `kritalibbrush` и дальше к `kritalibkis` -> `kritaui` -> `PyKrita.krita`.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 

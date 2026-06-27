@@ -28,7 +28,7 @@
   upstream-библиотеки Krita для Android: `libkritaversion.so`, `libkritaglobal.so`,
   `libkritaplugin.so`, `libkritamultiarch.so`, `libkritacolor.so` и
   `libkritastore.so`, `libkritaresources.so`, `libkritawidgetutils.so` и
-  `libkritacommand.so`, `libkritapigment.so`.
+  `libkritacommand.so`, `libkritapigment.so`, `libkritametadata.so`.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.
