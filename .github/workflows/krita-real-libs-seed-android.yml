@@ -42,7 +42,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential ninja-build libboost-dev libeigen3-dev
+          sudo apt-get install -y build-essential ninja-build libboost-dev libeigen3-dev libxsimd-dev
 
       - name: Download Android PyQt5 dependency prefix
         env:
@@ -99,7 +99,10 @@ jobs:
             config-android-stdio-forwarding.h.cmake \
             config-gsl.h.cmake \
             config-safe-asserts.h.cmake \
+            libs/color \
             libs/global \
+            libs/koplugin \
+            libs/multiarch \
             libs/version \
             plugins/extensions/pykrita
 
@@ -135,14 +138,29 @@ jobs:
           build_dir="build/krita-real-libs-seed/${{ matrix.abi }}"
           readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
 
-          cmake --build "$build_dir" --target kritaversion kritaglobal --verbose
+          cmake --build "$build_dir" --target \
+            kritaversion \
+            kritaglobal \
+            kritaplugin \
+            kritamultiarch \
+            kritacolor \
+            --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
           global_library="$(find "$build_dir" -name 'libkritaglobal.so' -print -quit)"
+          plugin_library="$(find "$build_dir" -name 'libkritaplugin.so' -print -quit)"
+          multiarch_library="$(find "$build_dir" -name 'libkritamultiarch.so' -print -quit)"
+          color_library="$(find "$build_dir" -name 'libkritacolor.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
+          test -n "$plugin_library"
+          test -n "$multiarch_library"
+          test -n "$color_library"
           file "$version_library"
           file "$global_library"
+          file "$plugin_library"
+          file "$multiarch_library"
+          file "$color_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -166,6 +184,36 @@ jobs:
 
           "$readelf" -Ws "$global_library" | tee "$RUNNER_TEMP/kritaglobal-symbols.txt"
           grep -q "_ZN14KisUsageLogger10initializeEv" "$RUNNER_TEMP/kritaglobal-symbols.txt"
+
+          "$readelf" -h "$plugin_library" | tee "$RUNNER_TEMP/kritaplugin-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaplugin-elf-header.txt"
+
+          "$readelf" -d "$plugin_library" | tee "$RUNNER_TEMP/kritaplugin-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritaplugin-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaplugin-dynamic.txt"
+
+          "$readelf" -Ws "$plugin_library" | tee "$RUNNER_TEMP/kritaplugin-symbols.txt"
+          grep -q "KoPluginLoader" "$RUNNER_TEMP/kritaplugin-symbols.txt"
+
+          "$readelf" -h "$multiarch_library" | tee "$RUNNER_TEMP/kritamultiarch-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritamultiarch-elf-header.txt"
+
+          "$readelf" -d "$multiarch_library" | tee "$RUNNER_TEMP/kritamultiarch-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritamultiarch-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritamultiarch-dynamic.txt"
+
+          "$readelf" -Ws "$multiarch_library" | tee "$RUNNER_TEMP/kritamultiarch-symbols.txt"
+          grep -q "vectorizationConfiguration" "$RUNNER_TEMP/kritamultiarch-symbols.txt"
+
+          "$readelf" -h "$color_library" | tee "$RUNNER_TEMP/kritacolor-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritacolor-elf-header.txt"
+
+          "$readelf" -d "$color_library" | tee "$RUNNER_TEMP/kritacolor-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritacolor-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritacolor-dynamic.txt"
+
+          "$readelf" -Ws "$color_library" | tee "$RUNNER_TEMP/kritacolor-symbols.txt"
+          grep -q "KisColorManager" "$RUNNER_TEMP/kritacolor-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

@@ -56,6 +56,16 @@ endmacro()
 macro(kis_add_tests)
 endmacro()
 
+macro(kis_add_test)
+endmacro()
+
+function(disable_seed_tests relative_dir)
+    set(_tests_cmake "${KRITA_SOURCE_DIR}/${relative_dir}/tests/CMakeLists.txt")
+    if(EXISTS "${_tests_cmake}")
+        file(WRITE "${_tests_cmake}" "# Disabled by the Android real-libs seed probe.\n")
+    endif()
+endfunction()
+
 function(add_android_qt5_module module)
     set(library_path "${ANDROID_PREFIX}/lib/libQt5${module}_${ANDROID_ABI}.so")
     set(include_root "${ANDROID_PREFIX}/include")
@@ -215,12 +225,15 @@ class KConfig
 {
 };
 ]=])
+file(COPY_FILE "${_external_include_dir}/kconfig.h" "${_external_include_dir}/KConfig")
 
 file(WRITE "${_external_include_dir}/ksharedconfig.h" [=[
 #pragma once
 
 #include <QSharedPointer>
 #include "kconfig.h"
+
+class KConfigGroup;
 
 class KSharedConfig : public KConfig
 {
@@ -231,8 +244,11 @@ public:
     {
         return Ptr::create();
     }
+
+    KConfigGroup group(const char *) const;
 };
 ]=])
+file(COPY_FILE "${_external_include_dir}/ksharedconfig.h" "${_external_include_dir}/KSharedConfig")
 
 file(WRITE "${_external_include_dir}/kconfiggroup.h" [=[
 #pragma once
@@ -248,16 +264,50 @@ public:
     {
     }
 
-    bool readEntry(const QString &, bool defaultValue) const
+    template <typename T>
+    T readEntry(const QString &, const T &defaultValue) const
     {
         return defaultValue;
     }
 
-    void writeEntry(const QString &, bool)
+    template <typename T>
+    void writeEntry(const QString &, const T &)
     {
     }
 };
+
+inline KConfigGroup KSharedConfig::group(const char *) const
+{
+    return KConfigGroup(KSharedConfig::Ptr(), "");
+}
 ]=])
+file(COPY_FILE "${_external_include_dir}/kconfiggroup.h" "${_external_include_dir}/KConfigGroup")
+
+file(WRITE "${_external_include_dir}/kpluginfactory.h" [=[
+#pragma once
+
+#include <QObject>
+#include <QVariantList>
+
+class KPluginFactory : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit KPluginFactory(QObject *parent = nullptr)
+        : QObject(parent)
+    {
+    }
+
+    template <typename T>
+    T *create(QObject *parent = nullptr, const QVariantList &args = QVariantList())
+    {
+        Q_UNUSED(args)
+        return new T(parent);
+    }
+};
+]=])
+file(COPY_FILE "${_external_include_dir}/kpluginfactory.h" "${_external_include_dir}/KPluginFactory")
 
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
 #pragma once
@@ -522,6 +572,10 @@ add_library(KF5::ConfigCore INTERFACE IMPORTED GLOBAL)
 set_target_properties(KF5::ConfigCore PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
 
+add_library(KF5::CoreAddons INTERFACE IMPORTED GLOBAL)
+set_target_properties(KF5::CoreAddons PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
+
 add_library(Boost::boost INTERFACE IMPORTED GLOBAL)
 set_target_properties(Boost::boost PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "/usr/include")
@@ -529,6 +583,9 @@ set_target_properties(Boost::boost PROPERTIES
 add_library(Eigen3::Eigen INTERFACE IMPORTED GLOBAL)
 set_target_properties(Eigen3::Eigen PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "/usr/include/eigen3")
+
+add_library(xsimd INTERFACE)
+target_include_directories(xsimd INTERFACE "/usr/include")
 
 add_library(lager INTERFACE)
 target_include_directories(lager INTERFACE "${_external_include_dir}")
@@ -538,9 +595,11 @@ target_include_directories(zug INTERFACE "${_external_include_dir}")
 
 set(HIDE_SAFE_ASSERTS ON)
 set(CRASH_ON_SAFE_ASSERTS OFF)
+set(HAVE_DBUS OFF)
 set(GSL_FOUND OFF)
 set(HAVE_GSL 0)
 set(ANDROID_ENABLE_STDIO_FORWARDING OFF)
+set(QT_QTCORE_LIBRARY Qt5::Core)
 configure_file("${KRITA_SOURCE_DIR}/KoConfig.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/KoConfig.h")
 configure_file("${KRITA_SOURCE_DIR}/config-gsl.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-gsl.h")
 configure_file("${KRITA_SOURCE_DIR}/config-safe-asserts.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-safe-asserts.h")
@@ -598,3 +657,46 @@ add_custom_command(
     VERBATIM)
 add_custom_target(kritaglobal_seed_included_moc DEPENDS "${_signal_mapper_moc}")
 add_dependencies(kritaglobal kritaglobal_seed_included_moc)
+
+disable_seed_tests(libs/koplugin)
+
+set(_kritaplugin_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaplugin")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/koplugin" "${_kritaplugin_build_dir}")
+
+target_sources(kritaplugin PRIVATE
+    "${_external_include_dir}/kpluginfactory.h")
+target_include_directories(kritaplugin
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/koplugin>"
+        "$<BUILD_INTERFACE:${_kritaplugin_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaplugin PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+set(_kritamultiarch_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritamultiarch")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/multiarch" "${_kritamultiarch_build_dir}")
+
+target_include_directories(kritamultiarch
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/multiarch>"
+        "$<BUILD_INTERFACE:${_kritamultiarch_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritamultiarch PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+set(_kritacolor_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritacolor")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/color" "${_kritacolor_build_dir}")
+
+target_include_directories(kritacolor
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/color>"
+        "$<BUILD_INTERFACE:${_kritacolor_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritacolor PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
