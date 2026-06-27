@@ -229,6 +229,7 @@ add_android_qt5_module(Core)
 add_android_qt5_module(Gui)
 add_android_qt5_module(Widgets)
 add_android_qt5_module(Xml)
+add_android_qt5_module(Svg)
 add_android_qt5_module(Sql)
 add_android_qt5_module(PrintSupport)
 add_android_qt5_module(AndroidExtras)
@@ -2305,6 +2306,31 @@ add_library(Eigen3::Eigen INTERFACE IMPORTED GLOBAL)
 set_target_properties(Eigen3::Eigen PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "/usr/include/eigen3")
 
+set(_seed_system_include_dirs "")
+foreach(_seed_system_include_dir IN ITEMS
+        "/usr/include"
+        "/usr/include/freetype2"
+        "/usr/include/harfbuzz"
+        "/usr/include/fontconfig"
+        "/usr/include/fribidi"
+        "/usr/include/glib-2.0"
+        "/usr/lib/x86_64-linux-gnu/glib-2.0/include")
+    if(IS_DIRECTORY "${_seed_system_include_dir}")
+        list(APPEND _seed_system_include_dirs "${_seed_system_include_dir}")
+    endif()
+endforeach()
+
+foreach(_seed_font_target IN ITEMS
+        Freetype::Freetype
+        HarfBuzz::HarfBuzz
+        FriBidi::FriBidi
+        Fontconfig::Fontconfig
+        libunibreak::libunibreak)
+    add_library(${_seed_font_target} INTERFACE IMPORTED GLOBAL)
+    set_target_properties(${_seed_font_target} PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${_seed_system_include_dirs}")
+endforeach()
+
 add_library(xsimd INTERFACE)
 target_include_directories(xsimd INTERFACE "${_external_include_dir}")
 
@@ -2574,3 +2600,56 @@ target_include_directories(kritametadata
         "${_external_include_dir}")
 target_compile_definitions(kritametadata PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/flake)
+disable_seed_subdir(libs/flake/resources/tests)
+
+set(KSeExpr_FOUND OFF)
+set(_seed_raqm_source_dir "${KRITA_SOURCE_DIR}/3rdparty_vendor/raqm/src/raqm-0.10.1/src")
+set(_seed_raqm_build_dir "${CMAKE_CURRENT_BINARY_DIR}/libraqm")
+file(MAKE_DIRECTORY "${_seed_raqm_build_dir}")
+
+set(RAQM_VERSION_MAJOR 0)
+set(RAQM_VERSION_MINOR 10)
+set(RAQM_VERSION_MICRO 1)
+set(RAQM_VERSION "0.10.1.1")
+configure_file(
+    "${_seed_raqm_source_dir}/raqm-version.h.in"
+    "${_seed_raqm_build_dir}/raqm-version.h")
+
+add_library(libraqm STATIC
+    "${_seed_raqm_source_dir}/raqm.c")
+set_property(TARGET libraqm PROPERTY C_STANDARD 99)
+target_include_directories(libraqm
+    PUBLIC
+        "${_seed_raqm_source_dir}"
+        "${_seed_raqm_build_dir}")
+target_link_libraries(libraqm
+    PUBLIC
+        Freetype::Freetype
+    PRIVATE
+        HarfBuzz::HarfBuzz
+        FriBidi::FriBidi)
+add_library(Raqm::Raqm ALIAS libraqm)
+
+set(_kritaflake_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaflake")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/flake" "${_kritaflake_build_dir}")
+
+target_include_directories(kritaflake
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/commands>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/tools>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/svg>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/text>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/xsimd>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake/resources>"
+        "$<BUILD_INTERFACE:${_kritaflake_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaflake PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritaflake PRIVATE
+    -fno-operator-names)
