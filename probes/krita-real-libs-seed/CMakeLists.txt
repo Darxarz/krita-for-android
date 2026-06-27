@@ -107,6 +107,7 @@ set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
     "${_external_include_dir}"
     "${_external_include_dir}/lager"
+    "${_external_include_dir}/gsl"
     "${_external_include_dir}/zug/compat"
     "${_external_include_dir}/zug/reducing"
     "${_external_include_dir}/zug/transducer"
@@ -406,6 +407,25 @@ file(WRITE "${_external_include_dir}/halfLimits.h" [=[
 #include "half.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/gsl/gsl_multimin.h" [=[
+#pragma once
+
+#include <cstddef>
+
+struct gsl_vector
+{
+};
+
+inline double gsl_vector_get(const gsl_vector *, size_t)
+{
+    return 0.0;
+}
+
+inline void gsl_vector_set(gsl_vector *, size_t, double)
+{
+}
+]=])
+
 file(WRITE "${_external_include_dir}/unwindstack/Regs.h" [=[
 #pragma once
 
@@ -545,6 +565,8 @@ target_include_directories(kritaglobal
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
+target_compile_options(kritaglobal PRIVATE
+    -include "${_external_include_dir}/gsl/gsl_multimin.h")
 
 set(_signal_mapper_moc "${_kritaglobal_build_dir}/moc_KisSignalMapper.cpp")
 add_custom_command(
