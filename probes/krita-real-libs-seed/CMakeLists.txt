@@ -59,6 +59,99 @@ endmacro()
 macro(kis_add_test)
 endmacro()
 
+function(qt_add_resources out_var)
+    set(_generated_resources "")
+
+    foreach(_qrc IN LISTS ARGN)
+        get_filename_component(_qrc_name "${_qrc}" NAME_WE)
+        set(_generated "${CMAKE_CURRENT_BINARY_DIR}/qrc_${_qrc_name}_seed.cpp")
+        file(WRITE "${_generated}" [=[
+int qInitResources_]=] "${_qrc_name}" [=[()
+{
+    return 1;
+}
+
+int qCleanupResources_]=] "${_qrc_name}" [=[()
+{
+    return 1;
+}
+]=])
+        list(APPEND _generated_resources "${_generated}")
+    endforeach()
+
+    set(${out_var} ${${out_var}} ${_generated_resources} PARENT_SCOPE)
+endfunction()
+
+function(ki18n_wrap_ui out_var)
+    set(_generated_ui_headers "")
+
+    foreach(_ui IN LISTS ARGN)
+        get_filename_component(_ui_name "${_ui}" NAME_WE)
+        set(_generated_header "${CMAKE_CURRENT_BINARY_DIR}/ui_${_ui_name}.h")
+
+        if(_ui_name STREQUAL "kshortcutwidget")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QWidget>
+#include "kkeysequencewidget.h"
+
+namespace Ui {
+
+class KisKShortcutWidget
+{
+public:
+    KisKKeySequenceWidget *priEditor = nullptr;
+    KisKKeySequenceWidget *altEditor = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QVBoxLayout(parent);
+        layout->addWidget(new QLabel(QStringLiteral("Primary"), parent));
+        priEditor = new KisKKeySequenceWidget(parent);
+        layout->addWidget(priEditor);
+        layout->addWidget(new QLabel(QStringLiteral("Alternate"), parent));
+        altEditor = new KisKKeySequenceWidget(parent);
+        layout->addWidget(altEditor);
+    }
+};
+
+} // namespace Ui
+]=])
+        else()
+            file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${_ui}" _ui_content)
+            string(REGEX MATCH "<class>([^<]+)</class>" _ui_class_match "${_ui_content}")
+            set(_ui_class "${CMAKE_MATCH_1}")
+            if(NOT _ui_class)
+                set(_ui_class "${_ui_name}")
+            endif()
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QWidget>
+
+namespace Ui {
+
+class ]=] "${_ui_class}" [=[
+{
+public:
+    void setupUi(QWidget *)
+    {
+    }
+};
+
+} // namespace Ui
+]=])
+        endif()
+
+        list(APPEND _generated_ui_headers "${_generated_header}")
+    endforeach()
+
+    set(${out_var} ${${out_var}} ${_generated_ui_headers} PARENT_SCOPE)
+endfunction()
+
 function(disable_seed_tests relative_dir)
     set(_tests_cmake "${KRITA_SOURCE_DIR}/${relative_dir}/tests/CMakeLists.txt")
     if(EXISTS "${_tests_cmake}")
@@ -91,6 +184,8 @@ add_android_qt5_module(Core)
 add_android_qt5_module(Gui)
 add_android_qt5_module(Widgets)
 add_android_qt5_module(Xml)
+add_android_qt5_module(Sql)
+add_android_qt5_module(PrintSupport)
 add_android_qt5_module(AndroidExtras)
 
 find_program(_qt5_moc_executable
@@ -110,8 +205,12 @@ endif()
 
 set(Qt5Core_VERSION_MAJOR 5)
 set(Qt5Core_VERSION_MINOR 15)
+set(Qt5Core_VERSION_PATCH 2)
 set(Qt5Core_MOC_EXECUTABLE "${_qt5_moc_executable}")
 set_property(TARGET Qt5::Core PROPERTY INTERFACE_QT_MAJOR_VERSION 5)
+set(Qt5Gui_PRIVATE_INCLUDE_DIRS
+    "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}"
+    "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}/QtGui")
 
 set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
@@ -231,8 +330,47 @@ file(WRITE "${_external_include_dir}/KLocalizedString" [=[
 file(WRITE "${_external_include_dir}/kconfig.h" [=[
 #pragma once
 
-class KConfig
+#include <QMap>
+#include <QString>
+
+class KConfigGroup;
+
+class KConfigBase
 {
+public:
+    virtual ~KConfigBase() = default;
+
+    KConfigGroup group(const QString &name) const;
+    QString name() const
+    {
+        return QString();
+    }
+
+    void sync()
+    {
+    }
+};
+
+class KConfig : public KConfigBase
+{
+public:
+    enum OpenFlag {
+        SimpleConfig = 0x01
+    };
+    using OpenFlags = int;
+
+    explicit KConfig(const QString &name = QString(), OpenFlags = 0)
+        : m_name(name)
+    {
+    }
+
+    QString name() const
+    {
+        return m_name;
+    }
+
+private:
+    QString m_name;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KConfig" [=[
@@ -244,6 +382,7 @@ file(WRITE "${_external_include_dir}/ksharedconfig.h" [=[
 #pragma once
 
 #include <QSharedPointer>
+#include <QString>
 #include "kconfig.h"
 
 class KConfigGroup;
@@ -253,13 +392,18 @@ class KSharedConfig : public KConfig
 public:
     using Ptr = QSharedPointer<KSharedConfig>;
 
-    static Ptr openConfig()
+    explicit KSharedConfig(const QString &name = QString())
+        : KConfig(name)
     {
-        return Ptr::create();
     }
 
-    KConfigGroup group(const char *) const;
+    static Ptr openConfig(const QString &name = QString())
+    {
+        return Ptr::create(name);
+    }
 };
+
+using KSharedConfigPtr = KSharedConfig::Ptr;
 ]=])
 file(WRITE "${_external_include_dir}/KSharedConfig" [=[
 #pragma once
@@ -269,6 +413,8 @@ file(WRITE "${_external_include_dir}/KSharedConfig" [=[
 file(WRITE "${_external_include_dir}/kconfiggroup.h" [=[
 #pragma once
 
+#include <QMap>
+#include <QStringList>
 #include <QString>
 #include <QSharedPointer>
 #include "ksharedconfig.h"
@@ -276,30 +422,579 @@ file(WRITE "${_external_include_dir}/kconfiggroup.h" [=[
 class KConfigGroup
 {
 public:
-    KConfigGroup(const KSharedConfig::Ptr &, const char *)
+    enum WriteConfigFlag {
+        Normal = 0x00,
+        Persistent = 0x01
+    };
+    using WriteConfigFlags = int;
+
+    KConfigGroup() = default;
+
+    KConfigGroup(const KSharedConfig::Ptr &config, const char *name)
+        : m_config(config.data())
+        , m_name(QString::fromUtf8(name ? name : ""))
+    {
+    }
+
+    KConfigGroup(const KSharedConfig::Ptr &config, const QString &name)
+        : m_config(config.data())
+        , m_name(name)
+    {
+    }
+
+    KConfigGroup(KConfigBase *config, const char *name)
+        : m_config(config)
+        , m_name(QString::fromUtf8(name ? name : ""))
+    {
+    }
+
+    KConfigGroup(KConfigBase *config, const QString &name)
+        : m_config(config)
+        , m_name(name)
+    {
+    }
+
+    KConfigGroup(const KConfigGroup *config, const char *name)
+        : m_config(config ? config->config() : nullptr)
+        , m_name(QString::fromUtf8(name ? name : ""))
+    {
+    }
+
+    KConfigGroup(const KConfigGroup *config, const QString &name)
+        : m_config(config ? config->config() : nullptr)
+        , m_name(name)
     {
     }
 
     template <typename T>
-    T readEntry(const QString &, const T &defaultValue) const
+    T readEntry(const QString &, const T &defaultValue = T()) const
     {
         return defaultValue;
     }
 
+    QString readEntry(const QString &, const char *defaultValue) const
+    {
+        return QString::fromUtf8(defaultValue ? defaultValue : "");
+    }
+
+    QString readEntry(const QString &) const
+    {
+        return QString();
+    }
+
     template <typename T>
-    void writeEntry(const QString &, const T &)
+    void writeEntry(const QString &, const T &, WriteConfigFlags = Normal)
     {
     }
+
+    bool hasKey(const QString &) const
+    {
+        return false;
+    }
+
+    bool hasGroup(const QString &) const
+    {
+        return false;
+    }
+
+    QMap<QString, QString> entryMap() const
+    {
+        return {};
+    }
+
+    QStringList groupList() const
+    {
+        return {};
+    }
+
+    void deleteEntry(const QString &)
+    {
+    }
+
+    void sync()
+    {
+    }
+
+    QString name() const
+    {
+        return m_name;
+    }
+
+    KConfigBase *config() const
+    {
+        return m_config;
+    }
+
+private:
+    KConfigBase *m_config = nullptr;
+    QString m_name;
 };
 
-inline KConfigGroup KSharedConfig::group(const char *) const
+inline KConfigGroup KConfigBase::group(const QString &name) const
 {
-    return KConfigGroup(KSharedConfig::Ptr(), "");
+    return KConfigGroup(const_cast<KConfigBase *>(this), name);
 }
 ]=])
 file(WRITE "${_external_include_dir}/KConfigGroup" [=[
 #pragma once
 #include "kconfiggroup.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kcolorutils.h" [=[
+#pragma once
+
+#include <algorithm>
+#include <QColor>
+
+namespace KColorUtils {
+
+inline qreal clampUnit(qreal value)
+{
+    return std::max<qreal>(0.0, std::min<qreal>(1.0, value));
+}
+
+inline qreal luma(const QColor &color)
+{
+    return 0.2126 * color.redF() + 0.7152 * color.greenF() + 0.0722 * color.blueF();
+}
+
+inline QColor mix(const QColor &one, const QColor &two, qreal bias = 0.5)
+{
+    const qreal b = clampUnit(bias);
+    return QColor::fromRgbF(
+        one.redF() * (1.0 - b) + two.redF() * b,
+        one.greenF() * (1.0 - b) + two.greenF() * b,
+        one.blueF() * (1.0 - b) + two.blueF() * b,
+        one.alphaF() * (1.0 - b) + two.alphaF() * b);
+}
+
+inline QColor tint(const QColor &base, const QColor &color, qreal amount = 0.5)
+{
+    return mix(base, color, amount);
+}
+
+inline QColor shade(const QColor &color, qreal amount, qreal = 0.0)
+{
+    return amount >= 0.0 ? mix(color, Qt::white, amount) : mix(color, Qt::black, -amount);
+}
+
+inline QColor lighten(const QColor &color, qreal amount)
+{
+    return shade(color, amount);
+}
+
+inline QColor darken(const QColor &color, qreal amount, qreal = 1.0)
+{
+    return shade(color, -amount);
+}
+
+} // namespace KColorUtils
+]=])
+file(WRITE "${_external_include_dir}/KColorUtils" [=[
+#pragma once
+#include "kcolorutils.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kguiitem.h" [=[
+#pragma once
+
+#include <QIcon>
+#include <QPushButton>
+#include <QString>
+
+class KGuiItem
+{
+public:
+    explicit KGuiItem(const QString &text = QString(),
+                      const QString &iconName = QString(),
+                      const QString &toolTip = QString(),
+                      const QString &whatsThis = QString())
+        : m_text(text)
+        , m_iconName(iconName)
+        , m_toolTip(toolTip)
+        , m_whatsThis(whatsThis)
+    {
+    }
+
+    QString text() const
+    {
+        return m_text;
+    }
+
+    QIcon icon() const
+    {
+        return QIcon::fromTheme(m_iconName);
+    }
+
+    static void assign(QPushButton *button, const KGuiItem &item)
+    {
+        if (!button) {
+            return;
+        }
+
+        button->setText(item.text());
+        button->setIcon(item.icon());
+        button->setToolTip(item.m_toolTip);
+        button->setWhatsThis(item.m_whatsThis);
+    }
+
+private:
+    QString m_text;
+    QString m_iconName;
+    QString m_toolTip;
+    QString m_whatsThis;
+};
+]=])
+file(WRITE "${_external_include_dir}/KGuiItem" [=[
+#pragma once
+#include "kguiitem.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kstandardguiitem.h" [=[
+#pragma once
+
+#include "kguiitem.h"
+
+namespace KStandardGuiItem {
+
+inline KGuiItem ok()
+{
+    return KGuiItem(QStringLiteral("OK"));
+}
+
+inline KGuiItem cancel()
+{
+    return KGuiItem(QStringLiteral("Cancel"));
+}
+
+inline KGuiItem close()
+{
+    return KGuiItem(QStringLiteral("Close"));
+}
+
+inline KGuiItem apply()
+{
+    return KGuiItem(QStringLiteral("Apply"));
+}
+
+inline KGuiItem defaults()
+{
+    return KGuiItem(QStringLiteral("Defaults"));
+}
+
+inline KGuiItem del()
+{
+    return KGuiItem(QStringLiteral("Delete"));
+}
+
+inline KGuiItem save()
+{
+    return KGuiItem(QStringLiteral("Save"));
+}
+
+inline KGuiItem discard()
+{
+    return KGuiItem(QStringLiteral("Discard"));
+}
+
+inline KGuiItem print()
+{
+    return KGuiItem(QStringLiteral("Print"));
+}
+
+} // namespace KStandardGuiItem
+]=])
+file(WRITE "${_external_include_dir}/KStandardGuiItem" [=[
+#pragma once
+#include "kstandardguiitem.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kmessagebox.h" [=[
+#pragma once
+
+#include <QString>
+#include <QWidget>
+#include "kguiitem.h"
+
+namespace KMessageBox {
+
+enum ButtonCode {
+    Continue = 1,
+    Cancel = 2,
+    Yes = 3,
+    No = 4,
+    PrimaryAction = 5,
+    SecondaryAction = 6
+};
+
+using Options = int;
+
+inline ButtonCode warningContinueCancel(QWidget *, const QString &, const QString & = QString(),
+                                        const KGuiItem & = KGuiItem(), const KGuiItem & = KGuiItem(),
+                                        const QString & = QString(), Options = 0)
+{
+    return Continue;
+}
+
+inline ButtonCode warningYesNoCancel(QWidget *, const QString &, const QString & = QString(),
+                                     const KGuiItem & = KGuiItem(), const KGuiItem & = KGuiItem(),
+                                     const KGuiItem & = KGuiItem(), const QString & = QString(),
+                                     Options = 0)
+{
+    return Yes;
+}
+
+inline ButtonCode questionTwoActions(QWidget *, const QString &, const QString & = QString(),
+                                     const KGuiItem & = KGuiItem(), const KGuiItem & = KGuiItem(),
+                                     const QString & = QString(), Options = 0)
+{
+    return PrimaryAction;
+}
+
+inline void error(QWidget *, const QString &, const QString & = QString())
+{
+}
+
+} // namespace KMessageBox
+]=])
+file(WRITE "${_external_include_dir}/KMessageBox" [=[
+#pragma once
+#include "kmessagebox.h"
+]=])
+
+file(WRITE "${_external_include_dir}/ktitlewidget.h" [=[
+#pragma once
+
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QLabel>
+#include <QPixmap>
+#include <QString>
+#include <QWidget>
+
+class KTitleWidget : public QWidget
+{
+public:
+    enum ImageAlignment {
+        ImageLeft,
+        ImageRight
+    };
+
+    explicit KTitleWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+        , m_iconLabel(new QLabel(this))
+        , m_textLabel(new QLabel(this))
+    {
+        auto *layout = new QHBoxLayout(this);
+        layout->addWidget(m_iconLabel);
+        layout->addWidget(m_textLabel);
+    }
+
+    void setText(const QString &text)
+    {
+        m_textLabel->setText(text);
+    }
+
+    void setIcon(const QIcon &icon, ImageAlignment = ImageLeft)
+    {
+        m_iconLabel->setPixmap(icon.pixmap(32));
+    }
+
+    void setPixmap(const QPixmap &pixmap, ImageAlignment = ImageLeft)
+    {
+        m_iconLabel->setPixmap(pixmap);
+    }
+
+private:
+    QLabel *m_iconLabel = nullptr;
+    QLabel *m_textLabel = nullptr;
+};
+]=])
+file(WRITE "${_external_include_dir}/KTitleWidget" [=[
+#pragma once
+#include "ktitlewidget.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kwidgetsaddons_version.h" [=[
+#pragma once
+
+#define KWIDGETSADDONS_VERSION_MAJOR 5
+#define KWIDGETSADDONS_VERSION_MINOR 100
+#define KWIDGETSADDONS_VERSION_PATCH 0
+]=])
+
+file(WRITE "${_external_include_dir}/kaboutdata.h" [=[
+#pragma once
+
+#include <QString>
+
+class KAboutData
+{
+public:
+    static KAboutData applicationData()
+    {
+        return KAboutData();
+    }
+
+    QString productName() const
+    {
+        return QStringLiteral("krita");
+    }
+
+    QString displayName() const
+    {
+        return QStringLiteral("Krita");
+    }
+
+    QString version() const
+    {
+        return QString();
+    }
+
+    QString bugAddress() const
+    {
+        return QString();
+    }
+
+    QString programIconName() const
+    {
+        return QStringLiteral("krita");
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KAboutData" [=[
+#pragma once
+#include "kaboutdata.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kemailsettings.h" [=[
+#pragma once
+
+#include <QString>
+
+class KEMailSettings
+{
+public:
+    enum Setting {
+        RealName,
+        EmailAddress
+    };
+
+    QString getSetting(Setting) const
+    {
+        return QString();
+    }
+};
+]=])
+
+file(WRITE "${_external_include_dir}/kwindowconfig.h" [=[
+#pragma once
+
+#include <QWindow>
+#include "kconfiggroup.h"
+
+class KWindowConfig
+{
+public:
+    static void saveWindowSize(QWindow *, KConfigGroup &)
+    {
+    }
+
+    static void saveWindowSize(QWindow *, const KConfigGroup &)
+    {
+    }
+
+    static void restoreWindowSize(QWindow *, const KConfigGroup &)
+    {
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KWindowConfig" [=[
+#pragma once
+#include "kwindowconfig.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kconfiggui.h" [=[
+#pragma once
+
+#include <QString>
+#include "kconfig.h"
+
+class KConfigGui
+{
+public:
+    static void setSessionConfig(const QString &, const QString &)
+    {
+    }
+
+    static KConfig *sessionConfig()
+    {
+        static KConfig config(QStringLiteral("krita-session"));
+        return &config;
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KConfigGui" [=[
+#pragma once
+#include "kconfiggui.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kicontheme.h" [=[
+#pragma once
+
+class KIconTheme
+{
+};
+]=])
+file(WRITE "${_external_include_dir}/KIconTheme" [=[
+#pragma once
+#include "kicontheme.h"
+]=])
+
+file(WRITE "${_external_include_dir}/ktoggleaction.h" [=[
+#pragma once
+
+#include <QAction>
+#include <QIcon>
+#include <QString>
+
+class KToggleAction : public QAction
+{
+public:
+    explicit KToggleAction(QObject *parent = nullptr)
+        : QAction(parent)
+    {
+        initialize();
+    }
+
+    explicit KToggleAction(const QString &text, QObject *parent = nullptr)
+        : QAction(text, parent)
+    {
+        initialize();
+    }
+
+    KToggleAction(const QIcon &icon, const QString &text, QObject *parent = nullptr)
+        : QAction(icon, text, parent)
+    {
+        initialize();
+    }
+
+protected:
+    virtual void slotToggled(bool)
+    {
+    }
+
+private:
+    void initialize()
+    {
+        setCheckable(true);
+        QObject::connect(this, &QAction::toggled, this, &KToggleAction::slotToggled);
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KToggleAction" [=[
+#pragma once
+#include "ktoggleaction.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/kpluginfactory.h" [=[
@@ -800,6 +1495,12 @@ add_library(KF5::CoreAddons INTERFACE IMPORTED GLOBAL)
 set_target_properties(KF5::CoreAddons PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
 
+foreach(_kf_target IN ITEMS ItemViews ConfigGui GuiAddons WidgetsAddons)
+    add_library(KF5::${_kf_target} INTERFACE IMPORTED GLOBAL)
+    set_target_properties(KF5::${_kf_target} PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
+endforeach()
+
 add_library(Boost::boost INTERFACE IMPORTED GLOBAL)
 set_target_properties(Boost::boost PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "/usr/include")
@@ -940,4 +1641,49 @@ target_include_directories(kritastore
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
 target_compile_definitions(kritastore PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/resources)
+
+set(_kritaresources_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaresources")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/resources" "${_kritaresources_build_dir}")
+
+target_include_directories(kritaresources
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/resources>"
+        "$<BUILD_INTERFACE:${_kritaresources_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaresources PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/widgetutils)
+
+set(_kritawidgetutils_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritawidgetutils")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/widgetutils" "${_kritawidgetutils_build_dir}")
+
+target_include_directories(kritawidgetutils
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/widgetutils>"
+        "$<BUILD_INTERFACE:${_kritawidgetutils_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritawidgetutils PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/command)
+
+set(_kritacommand_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritacommand")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/command" "${_kritacommand_build_dir}")
+
+target_include_directories(kritacommand
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/command>"
+        "$<BUILD_INTERFACE:${_kritacommand_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritacommand PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)

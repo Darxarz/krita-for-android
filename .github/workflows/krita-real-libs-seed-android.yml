@@ -80,11 +80,15 @@ jobs:
           test -d "$prefix/include/QtGui"
           test -d "$prefix/include/QtWidgets"
           test -d "$prefix/include/QtXml"
+          test -d "$prefix/include/QtSql"
+          test -d "$prefix/include/QtPrintSupport"
           test -d "$prefix/include/QtAndroidExtras"
           test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Gui_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Widgets_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Xml_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Sql_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5PrintSupport_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5AndroidExtras_${{ matrix.abi }}.so"
 
       - name: Clone sparse Krita checkout
@@ -100,11 +104,14 @@ jobs:
             config-gsl.h.cmake \
             config-safe-asserts.h.cmake \
             libs/color \
+            libs/command \
             libs/global \
             libs/koplugin \
             libs/multiarch \
+            libs/resources \
             libs/store \
             libs/version \
+            libs/widgetutils \
             plugins/extensions/pykrita
 
       - name: Apply Krita patches
@@ -146,6 +153,9 @@ jobs:
             kritamultiarch \
             kritacolor \
             kritastore \
+            kritaresources \
+            kritawidgetutils \
+            kritacommand \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -154,18 +164,27 @@ jobs:
           multiarch_library="$(find "$build_dir" -name 'libkritamultiarch.so' -print -quit)"
           color_library="$(find "$build_dir" -name 'libkritacolor.so' -print -quit)"
           store_library="$(find "$build_dir" -name 'libkritastore.so' -print -quit)"
+          resources_library="$(find "$build_dir" -name 'libkritaresources.so' -print -quit)"
+          widgetutils_library="$(find "$build_dir" -name 'libkritawidgetutils.so' -print -quit)"
+          command_library="$(find "$build_dir" -name 'libkritacommand.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
           test -n "$multiarch_library"
           test -n "$color_library"
           test -n "$store_library"
+          test -n "$resources_library"
+          test -n "$widgetutils_library"
+          test -n "$command_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
           file "$multiarch_library"
           file "$color_library"
           file "$store_library"
+          file "$resources_library"
+          file "$widgetutils_library"
+          file "$command_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -229,6 +248,45 @@ jobs:
 
           "$readelf" -Ws "$store_library" | tee "$RUNNER_TEMP/kritastore-symbols.txt"
           grep -q "KoStore" "$RUNNER_TEMP/kritastore-symbols.txt"
+
+          "$readelf" -h "$resources_library" | tee "$RUNNER_TEMP/kritaresources-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaresources-elf-header.txt"
+
+          "$readelf" -d "$resources_library" | tee "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libkritaplugin.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libkritastore.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Sql_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresources-dynamic.txt"
+
+          "$readelf" -Ws "$resources_library" | tee "$RUNNER_TEMP/kritaresources-symbols.txt"
+          grep -q "KisResourceLocator" "$RUNNER_TEMP/kritaresources-symbols.txt"
+
+          "$readelf" -h "$widgetutils_library" | tee "$RUNNER_TEMP/kritawidgetutils-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritawidgetutils-elf-header.txt"
+
+          "$readelf" -d "$widgetutils_library" | tee "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libkritaresources.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5PrintSupport_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5AndroidExtras_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgetutils-dynamic.txt"
+
+          "$readelf" -Ws "$widgetutils_library" | tee "$RUNNER_TEMP/kritawidgetutils-symbols.txt"
+          grep -q "KisActionRegistry" "$RUNNER_TEMP/kritawidgetutils-symbols.txt"
+
+          "$readelf" -h "$command_library" | tee "$RUNNER_TEMP/kritacommand-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritacommand-elf-header.txt"
+
+          "$readelf" -d "$command_library" | tee "$RUNNER_TEMP/kritacommand-dynamic.txt"
+          grep -q "Shared library: \\[libkritawidgetutils.so\\]" "$RUNNER_TEMP/kritacommand-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritacommand-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritacommand-dynamic.txt"
+
+          "$readelf" -Ws "$command_library" | tee "$RUNNER_TEMP/kritacommand-symbols.txt"
+          grep -q "KUndo2Stack" "$RUNNER_TEMP/kritacommand-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4
