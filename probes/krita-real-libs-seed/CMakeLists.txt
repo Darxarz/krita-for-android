@@ -331,6 +331,208 @@ file(WRITE "${_external_include_dir}/KPluginFactory" [=[
 #include "kpluginfactory.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/quazipnewinfo.h" [=[
+#pragma once
+
+#include <QFileDevice>
+#include <QString>
+
+class QuaZipNewInfo
+{
+public:
+    explicit QuaZipNewInfo(const QString &name)
+        : name(name)
+    {
+    }
+
+    void setPermissions(QFileDevice::Permissions)
+    {
+    }
+
+    QString name;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/quazip.h" [=[
+#pragma once
+
+#include <QIODevice>
+#include <QString>
+#include <QStringList>
+
+#ifndef ZIP_OK
+#define ZIP_OK 0
+#endif
+
+class QuaZip
+{
+public:
+    enum Mode {
+        mdCreate,
+        mdUnzip
+    };
+
+    explicit QuaZip(const QString &)
+    {
+    }
+
+    explicit QuaZip(QIODevice *device)
+        : m_device(device)
+    {
+    }
+
+    void setDataDescriptorWritingEnabled(bool)
+    {
+    }
+
+    void setZip64Enabled(bool)
+    {
+    }
+
+    void setFileNameCodec(const char *)
+    {
+    }
+
+    QIODevice *getIoDevice() const
+    {
+        return m_device;
+    }
+
+    void setAutoClose(bool)
+    {
+    }
+
+    bool open(Mode)
+    {
+        return true;
+    }
+
+    void close()
+    {
+    }
+
+    int getZipError() const
+    {
+        return ZIP_OK;
+    }
+
+    int getEntriesCount() const
+    {
+        return 0;
+    }
+
+    QStringList getFileNameList() const
+    {
+        return QStringList();
+    }
+
+    bool setCurrentFile(const QString &)
+    {
+        return false;
+    }
+
+private:
+    QIODevice *m_device = nullptr;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/quazipfile.h" [=[
+#pragma once
+
+#include <cstring>
+#include <QByteArray>
+#include <QIODevice>
+#include "quazip.h"
+#include "quazipnewinfo.h"
+
+class QuaZipFile : public QIODevice
+{
+public:
+    explicit QuaZipFile(QuaZip *, QObject *parent = nullptr)
+        : QIODevice(parent)
+    {
+    }
+
+    bool open(OpenMode mode) override
+    {
+        QIODevice::open(mode);
+        return true;
+    }
+
+    bool open(OpenMode mode, const QuaZipNewInfo &, const char * = nullptr,
+              unsigned int = 0, int = 0, int = 0)
+    {
+        QIODevice::open(mode);
+        return true;
+    }
+
+    void close() override
+    {
+        QIODevice::close();
+    }
+
+    int getZipError() const
+    {
+        return ZIP_OK;
+    }
+
+    qint64 size() const override
+    {
+        return m_buffer.size();
+    }
+
+protected:
+    qint64 readData(char *data, qint64 maxSize) override
+    {
+        const qint64 available = qMin(maxSize, qint64(m_buffer.size() - m_pos));
+        if (available <= 0) {
+            return -1;
+        }
+        memcpy(data, m_buffer.constData() + m_pos, size_t(available));
+        m_pos += available;
+        return available;
+    }
+
+    qint64 writeData(const char *data, qint64 maxSize) override
+    {
+        m_buffer.append(data, int(maxSize));
+        return maxSize;
+    }
+
+private:
+    QByteArray m_buffer;
+    qint64 m_pos = 0;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/quazipdir.h" [=[
+#pragma once
+
+#include <QString>
+#include "quazip.h"
+
+class QuaZipDir
+{
+public:
+    QuaZipDir(QuaZip *, const QString &)
+    {
+    }
+
+    bool exists() const
+    {
+        return true;
+    }
+};
+]=])
+
+file(WRITE "${_external_include_dir}/quazipfileinfo.h" [=[
+#pragma once
+
+class QuaZipFileInfo
+{
+};
+]=])
+
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
 #pragma once
 
@@ -622,6 +824,8 @@ set(GSL_FOUND OFF)
 set(HAVE_GSL 0)
 set(ANDROID_ENABLE_STDIO_FORWARDING OFF)
 set(QT_QTCORE_LIBRARY Qt5::Core)
+set(QUAZIP_INCLUDE_DIRS "${_external_include_dir}")
+set(QUAZIP_LIBRARIES "")
 configure_file("${KRITA_SOURCE_DIR}/KoConfig.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/KoConfig.h")
 configure_file("${KRITA_SOURCE_DIR}/config-gsl.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-gsl.h")
 configure_file("${KRITA_SOURCE_DIR}/config-safe-asserts.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-safe-asserts.h")
@@ -721,4 +925,19 @@ target_include_directories(kritacolor
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
 target_compile_definitions(kritacolor PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+
+disable_seed_tests(libs/store)
+
+set(_kritastore_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritastore")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/store" "${_kritastore_build_dir}")
+
+target_include_directories(kritastore
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/store>"
+        "$<BUILD_INTERFACE:${_kritastore_build_dir}>"
+    PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritastore PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
