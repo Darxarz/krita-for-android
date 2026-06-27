@@ -4,6 +4,7 @@ project(krita_real_libs_seed LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
 
 if(NOT KRITA_SOURCE_DIR)
     message(FATAL_ERROR "KRITA_SOURCE_DIR must point at an upstream Krita checkout")
@@ -81,6 +82,26 @@ add_android_qt5_module(Gui)
 add_android_qt5_module(Widgets)
 add_android_qt5_module(Xml)
 add_android_qt5_module(AndroidExtras)
+
+find_program(_qt5_moc_executable
+    NAMES moc
+    HINTS "${ANDROID_PREFIX}/bin"
+    NO_DEFAULT_PATH)
+
+if(NOT _qt5_moc_executable)
+    message(FATAL_ERROR "Could not find host Qt moc under ${ANDROID_PREFIX}/bin")
+endif()
+
+if(NOT TARGET Qt5::moc)
+    add_executable(Qt5::moc IMPORTED GLOBAL)
+    set_target_properties(Qt5::moc PROPERTIES
+        IMPORTED_LOCATION "${_qt5_moc_executable}")
+endif()
+
+set(Qt5Core_VERSION_MAJOR 5)
+set(Qt5Core_VERSION_MINOR 15)
+set(Qt5Core_MOC_EXECUTABLE "${_qt5_moc_executable}")
+set_property(TARGET Qt5::Core PROPERTY INTERFACE_QT_MAJOR_VERSION 5)
 
 set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
@@ -519,3 +540,31 @@ target_include_directories(kritaglobal
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
         "${_external_include_dir}")
+
+set(_signal_mapper_moc "${_kritaglobal_build_dir}/moc_KisSignalMapper.cpp")
+add_custom_command(
+    OUTPUT "${_signal_mapper_moc}"
+    COMMAND "${_qt5_moc_executable}"
+        -DQT_CORE_LIB
+        -DQT_GUI_LIB
+        -DQT_WIDGETS_LIB
+        -DQT_XML_LIB
+        -DQT_ANDROIDEXTRAS_LIB
+        -DQT_NO_DEBUG
+        -Dkritaglobal_EXPORTS
+        -I"${KRITA_SOURCE_DIR}/libs/global"
+        -I"${_kritaglobal_build_dir}"
+        -I"${CMAKE_CURRENT_BINARY_DIR}"
+        -I"${_external_include_dir}"
+        -I"${ANDROID_PREFIX}/include"
+        -I"${ANDROID_PREFIX}/include/QtCore"
+        -I"${ANDROID_PREFIX}/include/QtGui"
+        -I"${ANDROID_PREFIX}/include/QtWidgets"
+        -o "${_signal_mapper_moc}"
+        "${KRITA_SOURCE_DIR}/libs/global/KisSignalMapper.h"
+    DEPENDS
+        "${KRITA_SOURCE_DIR}/libs/global/KisSignalMapper.h"
+        "${_kritaglobal_build_dir}/kritaglobal_export.h"
+    VERBATIM)
+add_custom_target(kritaglobal_seed_included_moc DEPENDS "${_signal_mapper_moc}")
+add_dependencies(kritaglobal kritaglobal_seed_included_moc)
