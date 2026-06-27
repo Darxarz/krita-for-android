@@ -91,6 +91,11 @@ file(MAKE_DIRECTORY
     "${_external_include_dir}/zug/transducer"
     "${_external_include_dir}/unwindstack")
 
+if(EXISTS "/usr/include/boost")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink
+        "/usr/include/boost" "${_external_include_dir}/boost")
+endif()
+
 file(WRITE "${_external_include_dir}/klocalizedstring.h" [=[
 #pragma once
 
