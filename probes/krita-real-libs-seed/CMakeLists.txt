@@ -1978,9 +1978,29 @@ public:
     qt_cursor() = default;
 
     template <typename State>
-    explicit qt_cursor(const State &)
+    explicit qt_cursor(const State &state)
+        : m_value(state.get())
     {
     }
+
+    template <typename Func>
+    void bind(Func &&func)
+    {
+        func(m_value);
+    }
+
+    T operator()() const
+    {
+        return m_value;
+    }
+
+    void set(const T &value)
+    {
+        m_value = value;
+    }
+
+private:
+    T m_value {};
 };
 
 } // namespace lager
@@ -1991,7 +2011,9 @@ file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
 
 #include "../state.hpp"
 
-#define LAGER_QT_CURSOR(type, name) lager::qt_cursor<type> name
+#define LAGER_QT_CURSOR(type, name) \
+    lager::qt_cursor<type> name; \
+    void set##name(const type &value) { name.set(value); }
 #define LAGER_QT(name) name
 ]=])
 
