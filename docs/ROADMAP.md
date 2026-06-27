@@ -225,18 +225,25 @@ CI probe `Krita real libs seed Android`. Он берёт уже зелёный A
 но сама библиотека собирается из upstream `libs/global` и линкуется с real Android
 `libkritaversion.so`.
 
+Следующий низовой слой тоже добавлен в этот probe: upstream `libs/koplugin`,
+`libs/multiarch` и `libs/color` собираются как реальные Android shared libraries
+`libkritaplugin.so`, `libkritamultiarch.so` и `libkritacolor.so`. Для этого seed
+добавляет минимальную generated surface для `KF5::CoreAddons/KPluginFactory` и
+header-only `xsimd`, а upstream source по-прежнему берётся напрямую из sparse checkout.
+
 CI проверяет обе ABI, ELF machine type, NEEDED-зависимости на Android Qt5 libraries,
-NEEDED-зависимость `libkritaglobal.so` на `libkritaversion.so` и экспортированные
-symbols `KritaVersionWrapper::versionString` / `KisUsageLogger::initialize`.
+NEEDED-зависимости новых Krita libraries на уже собранные seed libraries и экспортированные
+symbols `KritaVersionWrapper::versionString`, `KisUsageLogger::initialize`,
+`KoPluginLoader`, `vectorizationConfiguration` и `KisColorManager`.
 
 CI `Krita real libs seed Android` зелёный.
 
-Run: https://github.com/Darxarz/krita-for-android/actions/runs/28297422537
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28297925476
 
-Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
-недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,
-`kritaimage`, `kritapigment` и зависимости), чтобы убрать compile-probe stubs и собрать
-реальный loadable Python extension.
+Следующий слой: собрать следующий dependency cluster перед настоящей линковкой
+`PyKrita.krita`: `kritastore`, `kritaresources`, затем `kritawidgetutils` и
+`kritacommand`. Это нужно, чтобы постепенно убрать compile-probe stubs и приблизиться к
+Android-built цепочке `kritalibkis` -> `kritaui` -> `kritaimage` -> `PyKrita.krita`.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
