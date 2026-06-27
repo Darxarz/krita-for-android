@@ -350,6 +350,7 @@ file(WRITE "${_external_include_dir}/kconfig.h" [=[
 #pragma once
 
 #include <QMap>
+#include <QStandardPaths>
 #include <QString>
 
 class KConfigGroup;
@@ -1227,6 +1228,29 @@ private:
 file(WRITE "${_external_include_dir}/KSelectAction" [=[
 #pragma once
 #include "kselectaction.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kdesktopfile.h" [=[
+#pragma once
+
+#include <QString>
+
+class KDesktopFile
+{
+public:
+    explicit KDesktopFile(const QString &)
+    {
+    }
+
+    QString readDocPath() const
+    {
+        return QString();
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KDesktopFile" [=[
+#pragma once
+#include "kdesktopfile.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/kpluginfactory.h" [=[
