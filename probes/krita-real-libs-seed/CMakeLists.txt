@@ -93,6 +93,7 @@ function(ki18n_wrap_ui out_var)
             file(WRITE "${_generated_header}" [=[
 #pragma once
 
+#include <QGuiApplication>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -1276,6 +1277,7 @@ file(WRITE "${_external_include_dir}/KExtendableItemDelegate" [=[
 file(WRITE "${_external_include_dir}/ktreewidgetsearchline.h" [=[
 #pragma once
 
+#include <QGuiApplication>
 #include <QLineEdit>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
