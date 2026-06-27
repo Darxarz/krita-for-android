@@ -214,17 +214,24 @@ CI `Krita PyKrita link inventory` зелёный.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28293224421
 
-Следующий узкий слой: первая настоящая Krita shared library для Android. Добавлен
+Следующий узкий слой: первые настоящие Krita shared libraries для Android. Добавлен
 CI probe `Krita real libs seed Android`. Он берёт уже зелёный Android PyQt5 prefix,
-импортирует `Qt5::Core` из `libQt5Core_${abi}.so` и напрямую собирает upstream
-`libs/version/CMakeLists.txt` как реальную `libkritaversion.so`.
+импортирует Android Qt5 Core/Gui/Widgets/Xml/AndroidExtras и напрямую собирает upstream
+`libs/version/CMakeLists.txt` как реальную `libkritaversion.so`, а также upstream
+`libs/global/CMakeLists.txt` как реальную `libkritaglobal.so`.
 
-CI проверяет обе ABI, ELF machine type, NEEDED-зависимость на Android `Qt5Core` и
-экспортированный `KritaVersionWrapper::versionString` symbol.
+Для `kritaglobal` probe пока подставляет минимальную generated surface для внешних
+зависимостей (`KF5::I18n`, `KF5::ConfigCore`, Boost/Eigen/lager/zug/GSL/unwindstack),
+но сама библиотека собирается из upstream `libs/global` и линкуется с real Android
+`libkritaversion.so`.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости на Android Qt5 libraries,
+NEEDED-зависимость `libkritaglobal.so` на `libkritaversion.so` и экспортированные
+symbols `KritaVersionWrapper::versionString` / `KisUsageLogger::initialize`.
 
 CI `Krita real libs seed Android` зелёный.
 
-Run: https://github.com/Darxarz/krita-for-android/actions/runs/28294360136
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28297422537
 
 Следующий слой: переход от smoke к настоящей линковке `PyKrita.krita`. Для этого уже
 недостаточно SIP/PyQt; нужны Android-built Krita libraries (`kritalibkis`, `kritaui`,

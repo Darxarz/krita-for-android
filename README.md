@@ -24,8 +24,8 @@
   экспериментальный Android cross-build для модуля `PyQt5.sip`.
 - `.github/workflows/krita-deps-pyqt5-sip-android.yml` - проверяет, что `PyQt5.sip`
   собирается как Android extension module для `arm64-v8a` и `x86_64`.
-- `.github/workflows/krita-real-libs-seed-android.yml` - собирает первую настоящую
-  upstream-библиотеку Krita для Android: `libkritaversion.so`.
+- `.github/workflows/krita-real-libs-seed-android.yml` - собирает первые настоящие
+  upstream-библиотеки Krita для Android: `libkritaversion.so` и `libkritaglobal.so`.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.
