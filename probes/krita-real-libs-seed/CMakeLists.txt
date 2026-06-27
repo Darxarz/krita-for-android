@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(krita_real_libs_seed LANGUAGES CXX)
+project(krita_real_libs_seed LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
