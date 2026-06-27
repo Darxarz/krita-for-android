@@ -1741,8 +1741,9 @@ public:
     template <typename T>
     T *create(QObject *parent = nullptr, const QVariantList &args = QVariantList())
     {
+        Q_UNUSED(parent)
         Q_UNUSED(args)
-        return new T(parent);
+        return nullptr;
     }
 };
 ]=])
