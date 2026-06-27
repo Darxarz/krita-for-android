@@ -42,7 +42,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential ninja-build
+          sudo apt-get install -y build-essential ninja-build libboost-dev libeigen3-dev
 
       - name: Download Android PyQt5 dependency prefix
         env:
@@ -77,7 +77,15 @@ jobs:
           echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
 
           test -d "$prefix/include/QtCore"
+          test -d "$prefix/include/QtGui"
+          test -d "$prefix/include/QtWidgets"
+          test -d "$prefix/include/QtXml"
+          test -d "$prefix/include/QtAndroidExtras"
           test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Gui_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Widgets_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Xml_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5AndroidExtras_${{ matrix.abi }}.so"
 
       - name: Clone sparse Krita checkout
         run: |
@@ -86,7 +94,12 @@ jobs:
           git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
           git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
+            KoConfig.h.cmake \
             cmake/modules \
+            config-android-stdio-forwarding.h.cmake \
+            config-gsl.h.cmake \
+            config-safe-asserts.h.cmake \
+            libs/global \
             libs/version \
             plugins/extensions/pykrita
 
@@ -115,27 +128,44 @@ jobs:
             -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
             -DANDROID_PREFIX="$prefix"
 
-      - name: Build and verify kritaversion
+      - name: Build and verify Krita seed libraries
         run: |
           set -eux
 
           build_dir="build/krita-real-libs-seed/${{ matrix.abi }}"
           readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
 
-          cmake --build "$build_dir" --target kritaversion --verbose
+          cmake --build "$build_dir" --target kritaversion kritaglobal --verbose
 
-          library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
-          test -n "$library"
-          file "$library"
+          version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
+          global_library="$(find "$build_dir" -name 'libkritaglobal.so' -print -quit)"
+          test -n "$version_library"
+          test -n "$global_library"
+          file "$version_library"
+          file "$global_library"
 
-          "$readelf" -h "$library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
+          "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
 
-          "$readelf" -d "$library" | tee "$RUNNER_TEMP/kritaversion-dynamic.txt"
+          "$readelf" -d "$version_library" | tee "$RUNNER_TEMP/kritaversion-dynamic.txt"
           grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaversion-dynamic.txt"
 
-          "$readelf" -Ws "$library" | tee "$RUNNER_TEMP/kritaversion-symbols.txt"
+          "$readelf" -Ws "$version_library" | tee "$RUNNER_TEMP/kritaversion-symbols.txt"
           grep -q "_ZN19KritaVersionWrapper13versionString" "$RUNNER_TEMP/kritaversion-symbols.txt"
+
+          "$readelf" -h "$global_library" | tee "$RUNNER_TEMP/kritaglobal-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaglobal-elf-header.txt"
+
+          "$readelf" -d "$global_library" | tee "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libkritaversion.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Xml_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+          grep -q "Shared library: \\[libQt5AndroidExtras_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaglobal-dynamic.txt"
+
+          "$readelf" -Ws "$global_library" | tee "$RUNNER_TEMP/kritaglobal-symbols.txt"
+          grep -q "_ZN14KisUsageLogger10initializeEv" "$RUNNER_TEMP/kritaglobal-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4
