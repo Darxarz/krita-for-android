@@ -89,7 +89,44 @@ function(ki18n_wrap_ui out_var)
         get_filename_component(_ui_name "${_ui}" NAME_WE)
         set(_generated_header "${CMAKE_CURRENT_BINARY_DIR}/ui_${_ui_name}.h")
 
-        if(_ui_name STREQUAL "kshortcutwidget")
+        if(_ui_name STREQUAL "KisShortcutsDialog")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QTreeWidget>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <QStringList>
+#include <ktreewidgetsearchlinewidget.h>
+
+namespace Ui {
+
+class KisShortcutsDialog
+{
+public:
+    KTreeWidgetSearchLineWidget *searchFilter = nullptr;
+    QTreeWidget *list = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QVBoxLayout(parent);
+        searchFilter = new KTreeWidgetSearchLineWidget(parent);
+        list = new QTreeWidget(parent);
+        list->setColumnCount(3);
+        list->setHeaderLabels(QStringList()
+                              << QStringLiteral("Action")
+                              << QStringLiteral("Shortcut")
+                              << QStringLiteral("Alternate"));
+        list->setRootIsDecorated(true);
+        list->setSortingEnabled(true);
+        layout->addWidget(searchFilter);
+        layout->addWidget(list);
+    }
+};
+
+} // namespace Ui
+]=])
+        elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
 
@@ -1026,11 +1063,374 @@ file(WRITE "${_external_include_dir}/KToggleAction" [=[
 #include "ktoggleaction.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kdualaction.h" [=[
+#pragma once
+
+#include <QIcon>
+#include <QString>
+#include <ktoggleaction.h>
+
+class KDualAction : public KToggleAction
+{
+public:
+    explicit KDualAction(QObject *parent = nullptr)
+        : KToggleAction(parent)
+    {
+    }
+
+    KDualAction(const QString &inactiveText, const QString &activeText, QObject *parent = nullptr)
+        : KToggleAction(inactiveText, parent)
+        , m_inactiveText(inactiveText)
+        , m_activeText(activeText)
+    {
+    }
+
+    void setActive(bool active)
+    {
+        setChecked(active);
+        updateState(active);
+    }
+
+    bool isActive() const
+    {
+        return isChecked();
+    }
+
+    void setInactiveText(const QString &text)
+    {
+        m_inactiveText = text;
+        updateState(isChecked());
+    }
+
+    void setActiveText(const QString &text)
+    {
+        m_activeText = text;
+        updateState(isChecked());
+    }
+
+    void setInactiveIcon(const QIcon &icon)
+    {
+        m_inactiveIcon = icon;
+        updateState(isChecked());
+    }
+
+    void setActiveIcon(const QIcon &icon)
+    {
+        m_activeIcon = icon;
+        updateState(isChecked());
+    }
+
+private:
+    void updateState(bool active)
+    {
+        if (active) {
+            if (!m_activeText.isEmpty()) {
+                setText(m_activeText);
+            }
+            if (!m_activeIcon.isNull()) {
+                setIcon(m_activeIcon);
+            }
+        } else {
+            if (!m_inactiveText.isEmpty()) {
+                setText(m_inactiveText);
+            }
+            if (!m_inactiveIcon.isNull()) {
+                setIcon(m_inactiveIcon);
+            }
+        }
+    }
+
+    QString m_inactiveText;
+    QString m_activeText;
+    QIcon m_inactiveIcon;
+    QIcon m_activeIcon;
+};
+]=])
+file(WRITE "${_external_include_dir}/KDualAction" [=[
+#pragma once
+#include "kdualaction.h"
+]=])
+
+file(WRITE "${_external_include_dir}/ktogglefullscreenaction.h" [=[
+#pragma once
+
+#include <QWidget>
+#include <ktoggleaction.h>
+
+class KToggleFullScreenAction : public KToggleAction
+{
+public:
+    explicit KToggleFullScreenAction(QObject *parent = nullptr)
+        : KToggleAction(parent)
+    {
+    }
+
+    void setWindow(QWidget *window)
+    {
+        m_window = window;
+    }
+
+    QWidget *window() const
+    {
+        return m_window;
+    }
+
+protected:
+    void slotToggled(bool checked) override
+    {
+        if (!m_window) {
+            return;
+        }
+        if (checked) {
+            m_window->showFullScreen();
+        } else {
+            m_window->showNormal();
+        }
+    }
+
+private:
+    QWidget *m_window = nullptr;
+};
+]=])
+file(WRITE "${_external_include_dir}/KToggleFullScreenAction" [=[
+#pragma once
+#include "ktogglefullscreenaction.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kextendableitemdelegate.h" [=[
+#pragma once
+
+#include <QList>
+#include <QModelIndex>
+#include <QPersistentModelIndex>
+#include <QPixmap>
+#include <QStyledItemDelegate>
+#include <QWidget>
+
+class KExtendableItemDelegate : public QStyledItemDelegate
+{
+public:
+    enum {
+        ShowExtensionIndicatorRole = Qt::UserRole + 1000
+    };
+
+    explicit KExtendableItemDelegate(QObject *parent = nullptr)
+        : QStyledItemDelegate(parent)
+    {
+    }
+
+    void setExtendPixmap(const QPixmap &pixmap)
+    {
+        m_extendPixmap = pixmap;
+    }
+
+    void setContractPixmap(const QPixmap &pixmap)
+    {
+        m_contractPixmap = pixmap;
+    }
+
+    bool isExtended(const QModelIndex &index) const
+    {
+        return m_extendedIndexes.contains(QPersistentModelIndex(index));
+    }
+
+    void extendItem(QWidget *widget, const QModelIndex &index)
+    {
+        if (widget) {
+            widget->setParent(parentWidget());
+            widget->hide();
+        }
+        const QPersistentModelIndex persistent(index);
+        if (!m_extendedIndexes.contains(persistent)) {
+            m_extendedIndexes.append(persistent);
+        }
+    }
+
+    void contractItem(const QModelIndex &index)
+    {
+        m_extendedIndexes.removeAll(QPersistentModelIndex(index));
+    }
+
+    void contractAll()
+    {
+        m_extendedIndexes.clear();
+    }
+
+private:
+    QWidget *parentWidget() const
+    {
+        return qobject_cast<QWidget *>(parent());
+    }
+
+    QPixmap m_extendPixmap;
+    QPixmap m_contractPixmap;
+    QList<QPersistentModelIndex> m_extendedIndexes;
+};
+]=])
+file(WRITE "${_external_include_dir}/KExtendableItemDelegate" [=[
+#pragma once
+#include "kextendableitemdelegate.h"
+]=])
+
+file(WRITE "${_external_include_dir}/ktreewidgetsearchline.h" [=[
+#pragma once
+
+#include <QLineEdit>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
+
+class KTreeWidgetSearchLine : public QLineEdit
+{
+public:
+    explicit KTreeWidgetSearchLine(QWidget *parent = nullptr, QTreeWidget *treeWidget = nullptr)
+        : QLineEdit(parent)
+        , m_treeWidget(treeWidget)
+    {
+    }
+
+    void setTreeWidget(QTreeWidget *treeWidget)
+    {
+        m_treeWidget = treeWidget;
+    }
+
+    QTreeWidget *treeWidget() const
+    {
+        return m_treeWidget;
+    }
+
+private:
+    QTreeWidget *m_treeWidget = nullptr;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/ktreewidgetsearchlinewidget.h" [=[
+#pragma once
+
+#include <QVBoxLayout>
+#include <QWidget>
+#include <ktreewidgetsearchline.h>
+
+class KTreeWidgetSearchLineWidget : public QWidget
+{
+public:
+    explicit KTreeWidgetSearchLineWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+        , m_searchLine(new KTreeWidgetSearchLine(this))
+    {
+        auto *layout = new QVBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(m_searchLine);
+    }
+
+    KTreeWidgetSearchLine *searchLine() const
+    {
+        return m_searchLine;
+    }
+
+private:
+    KTreeWidgetSearchLine *m_searchLine = nullptr;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/klistwidgetsearchline.h" [=[
+#pragma once
+
+#include <QLineEdit>
+#include <QListWidget>
+
+class KListWidgetSearchLine : public QLineEdit
+{
+public:
+    explicit KListWidgetSearchLine(QWidget *parent = nullptr, QListWidget *listWidget = nullptr)
+        : QLineEdit(parent)
+        , m_listWidget(listWidget)
+    {
+    }
+
+    void setListWidget(QListWidget *listWidget)
+    {
+        m_listWidget = listWidget;
+    }
+
+    QListWidget *listWidget() const
+    {
+        return m_listWidget;
+    }
+
+private:
+    QListWidget *m_listWidget = nullptr;
+};
+]=])
+
+file(WRITE "${_external_include_dir}/kseparator.h" [=[
+#pragma once
+
+#include <QFrame>
+
+class KSeparator : public QFrame
+{
+public:
+    explicit KSeparator(QWidget *parent = nullptr)
+        : QFrame(parent)
+    {
+        setFrameShape(QFrame::HLine);
+        setFrameShadow(QFrame::Sunken);
+    }
+
+    explicit KSeparator(Qt::Orientation orientation, QWidget *parent = nullptr)
+        : QFrame(parent)
+    {
+        setFrameShape(orientation == Qt::Horizontal ? QFrame::HLine : QFrame::VLine);
+        setFrameShadow(QFrame::Sunken);
+    }
+};
+]=])
+
+file(WRITE "${_external_include_dir}/kactionmenu.h" [=[
+#pragma once
+
+#include <QAction>
+#include <QIcon>
+#include <QMenu>
+#include <QString>
+
+class KActionMenu : public QAction
+{
+public:
+    explicit KActionMenu(QObject *parent = nullptr)
+        : QAction(parent)
+    {
+        ensureMenu(QString());
+    }
+
+    explicit KActionMenu(const QString &text, QObject *parent = nullptr)
+        : QAction(text, parent)
+    {
+        ensureMenu(text);
+    }
+
+    KActionMenu(const QIcon &icon, const QString &text, QObject *parent = nullptr)
+        : QAction(icon, text, parent)
+    {
+        ensureMenu(text);
+    }
+
+private:
+    void ensureMenu(const QString &title)
+    {
+        if (!menu()) {
+            setMenu(new QMenu(title));
+        }
+    }
+};
+]=])
+
 file(WRITE "${_external_include_dir}/kstandardshortcut.h" [=[
 #pragma once
 
 #include <QKeySequence>
 #include <QList>
+#include <QString>
 
 namespace KStandardShortcut {
 
@@ -1109,6 +1509,23 @@ inline QList<QKeySequence> undo()
 inline QList<QKeySequence> redo()
 {
     return {};
+}
+
+inline StandardShortcut find(const QKeySequence &)
+{
+    return AccelNone;
+}
+
+inline QString label(StandardShortcut shortcut)
+{
+    switch (shortcut) {
+    case ShowToolbar:
+        return QStringLiteral("Show Toolbar");
+    case FullScreen:
+        return QStringLiteral("Full Screen");
+    default:
+        return QString();
+    }
 }
 
 } // namespace KStandardShortcut
