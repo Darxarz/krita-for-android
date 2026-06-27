@@ -2103,7 +2103,7 @@ file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
 
 #define LAGER_QT_CURSOR(type, name) \
     lager::qt_cursor<type> name; \
-    void set##name(const type &value) { name.set(value); }
+    void set##name(const type &_lagerValue) { this->name.set(_lagerValue); }
 #define LAGER_QT(name) name
 ]=])
 
