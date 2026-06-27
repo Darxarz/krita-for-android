@@ -254,6 +254,8 @@ set(Qt5Gui_PRIVATE_INCLUDE_DIRS
     "${ANDROID_PREFIX}/include/QtGui/${Qt5Core_VERSION_MAJOR}.${Qt5Core_VERSION_MINOR}.${Qt5Core_VERSION_PATCH}/QtGui"
     ${Qt5Core_PRIVATE_INCLUDE_DIRS})
 
+add_compile_definitions(QT_USE_QSTRINGBUILDER)
+
 set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
     "${_external_include_dir}"
@@ -326,6 +328,11 @@ public:
     static QByteArray applicationDomain()
     {
         return QByteArray();
+    }
+
+    static bool isApplicationTranslatedInto(const QString &)
+    {
+        return false;
     }
 
     static QString removeAcceleratorMarker(const QString &text)
@@ -801,6 +808,7 @@ file(WRITE "${_external_include_dir}/KStandardGuiItem" [=[
 file(WRITE "${_external_include_dir}/kmessagebox.h" [=[
 #pragma once
 
+#include <QMessageBox>
 #include <QString>
 #include <QWidget>
 #include "kguiitem.h"
