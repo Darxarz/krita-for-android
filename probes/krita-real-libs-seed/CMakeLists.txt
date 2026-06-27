@@ -134,6 +134,80 @@ public:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "PathToolOptionWidgetBase")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QStackedWidget>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include <QWidget>
+
+namespace Ui {
+
+class PathToolOptionWidgetBase
+{
+public:
+    QToolButton *corner = nullptr;
+    QToolButton *smooth = nullptr;
+    QToolButton *symmetric = nullptr;
+    QToolButton *lineSegment = nullptr;
+    QToolButton *curveSegment = nullptr;
+    QToolButton *linePoint = nullptr;
+    QToolButton *curvePoint = nullptr;
+    QToolButton *addPoint = nullptr;
+    QToolButton *removePoint = nullptr;
+    QToolButton *breakPoint = nullptr;
+    QToolButton *breakSegment = nullptr;
+    QToolButton *joinSegment = nullptr;
+    QToolButton *mergePoints = nullptr;
+    QToolButton *convertToPath = nullptr;
+    QStackedWidget *stackedWidget = nullptr;
+    QWidget *wdgShapeProperties = nullptr;
+    QWidget *lineShapeProperties = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QVBoxLayout(parent);
+        corner = makeToolButton(parent, layout);
+        smooth = makeToolButton(parent, layout);
+        symmetric = makeToolButton(parent, layout);
+        lineSegment = makeToolButton(parent, layout);
+        curveSegment = makeToolButton(parent, layout);
+        linePoint = makeToolButton(parent, layout);
+        curvePoint = makeToolButton(parent, layout);
+        addPoint = makeToolButton(parent, layout);
+        removePoint = makeToolButton(parent, layout);
+        breakPoint = makeToolButton(parent, layout);
+        breakSegment = makeToolButton(parent, layout);
+        joinSegment = makeToolButton(parent, layout);
+        mergePoints = makeToolButton(parent, layout);
+        convertToPath = makeToolButton(parent, layout);
+
+        stackedWidget = new QStackedWidget(parent);
+        stackedWidget->addWidget(new QWidget(stackedWidget));
+        stackedWidget->addWidget(new QWidget(stackedWidget));
+        layout->addWidget(stackedWidget);
+
+        wdgShapeProperties = new QWidget(parent);
+        wdgShapeProperties->setLayout(new QVBoxLayout(wdgShapeProperties));
+        lineShapeProperties = new QWidget(parent);
+        lineShapeProperties->setLayout(new QVBoxLayout(lineShapeProperties));
+        layout->addWidget(wdgShapeProperties);
+        layout->addWidget(lineShapeProperties);
+    }
+
+private:
+    QToolButton *makeToolButton(QWidget *parent, QVBoxLayout *layout)
+    {
+        auto *button = new QToolButton(parent);
+        layout->addWidget(button);
+        return button;
+    }
+};
+
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
