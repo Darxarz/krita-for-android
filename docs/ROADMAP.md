@@ -260,9 +260,24 @@ CI `Krita real libs seed Android` зелёный для этого слоя.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28301018937
 
+Следующий слой real-library цепочки тоже продвинут: upstream `libs/pigment` собирается как
+реальная Android shared library `libkritapigment.so`. Seed добавляет per-arch xsimd
+копии исходников (`NEON64` на `arm64-v8a`; `SSE2`, `SSSE3`, `SSE4_1`, `AVX`,
+`AVX2+FMA` на `x86_64`), включает Krita source root для `KoAlwaysInline.h`, отключает
+tests/benchmarks и собирает `kritapigment` с `-fno-operator-names`, как это требуется для
+старых Krita-имен методов `xor`/`and`/`or`.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости `libkritapigment.so` на Android
+Qt5 и предыдущие real seed libraries, а также exported symbol `KoColorSpaceRegistry`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28302430361
+
 Следующий слой: продолжить real-library цепочку к зависимостям `PyKrita.krita`, начиная с
-`kritalibbrush`/`kritapigment`/`kritaimage` и дальше к `kritalibkis` -> `kritaui` ->
-`PyKrita.krita`.
+оставшихся prerequisites для `kritaimage` (`kritawidgets`, `kritapsdutils`,
+`kritametadata`), затем `kritaimage`, `kritalibbrush` и дальше к `kritalibkis` ->
+`kritaui` -> `PyKrita.krita`.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
