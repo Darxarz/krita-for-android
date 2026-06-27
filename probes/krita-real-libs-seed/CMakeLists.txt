@@ -216,6 +216,7 @@ set(_external_include_dir "${CMAKE_CURRENT_BINARY_DIR}/generated-externals")
 file(MAKE_DIRECTORY
     "${_external_include_dir}"
     "${_external_include_dir}/lager"
+    "${_external_include_dir}/lager/extra"
     "${_external_include_dir}/gsl"
     "${_external_include_dir}/zug/compat"
     "${_external_include_dir}/zug/reducing"
@@ -239,6 +240,7 @@ file(WRITE "${_external_include_dir}/klocalizedstring.h" [=[
 
 #include <QString>
 #include <QStringList>
+#include <QByteArray>
 
 class KLocalizedString
 {
@@ -279,6 +281,11 @@ public:
         return QStringList();
     }
 
+    static QByteArray applicationDomain()
+    {
+        return QByteArray();
+    }
+
     static QString removeAcceleratorMarker(const QString &text)
     {
         return text;
@@ -306,6 +313,18 @@ inline QString i18n(const char *text, Args &&...)
 
 template <typename... Args>
 inline QString i18nc(const char *, const char *text, Args &&...)
+{
+    return QString::fromUtf8(text ? text : "");
+}
+
+template <typename... Args>
+inline QString i18nd(const char *, const char *text, Args &&...)
+{
+    return QString::fromUtf8(text ? text : "");
+}
+
+template <typename... Args>
+inline QString i18ndc(const char *, const char *, const char *text, Args &&...)
 {
     return QString::fromUtf8(text ? text : "");
 }
@@ -488,6 +507,11 @@ public:
     }
 
     bool hasKey(const QString &) const
+    {
+        return false;
+    }
+
+    bool exists() const
     {
         return false;
     }
@@ -997,6 +1021,210 @@ file(WRITE "${_external_include_dir}/KToggleAction" [=[
 #include "ktoggleaction.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kstandardshortcut.h" [=[
+#pragma once
+
+#include <QKeySequence>
+#include <QList>
+
+namespace KStandardShortcut {
+
+enum StandardShortcut {
+    AccelNone,
+    New,
+    Open,
+    Save,
+    SaveAs,
+    Revert,
+    Close,
+    Print,
+    PrintPreview,
+    Mail,
+    Quit,
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    Clear,
+    SelectAll,
+    Deselect,
+    Find,
+    FindNext,
+    FindPrev,
+    Replace,
+    ActualSize,
+    FitToPage,
+    FitToWidth,
+    FitToHeight,
+    ZoomIn,
+    ZoomOut,
+    Zoom,
+    Reload,
+    Up,
+    Back,
+    Forward,
+    Home,
+    Prior,
+    Next,
+    Goto,
+    GotoPage,
+    GotoLine,
+    Begin,
+    End,
+    DocumentBack,
+    DocumentForward,
+    AddBookmark,
+    EditBookmarks,
+    Spelling,
+    ShowMenubar,
+    ShowToolbar,
+    ShowStatusbar,
+    FullScreen,
+    KeyBindings,
+    Preferences,
+    ConfigureToolbars,
+    ConfigureNotifications,
+    Help,
+    WhatsThis,
+    ReportBug,
+    SwitchApplicationLanguage
+};
+
+inline QList<QKeySequence> shortcut(StandardShortcut)
+{
+    return {};
+}
+
+inline QList<QKeySequence> undo()
+{
+    return {};
+}
+
+inline QList<QKeySequence> redo()
+{
+    return {};
+}
+
+} // namespace KStandardShortcut
+]=])
+file(WRITE "${_external_include_dir}/KStandardShortcut" [=[
+#pragma once
+#include "kstandardshortcut.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kacceleratormanager.h" [=[
+#pragma once
+
+#include <QStringList>
+#include <QWidget>
+
+class KAcceleratorManager
+{
+public:
+    static void addStandardActionNames(const QStringList &)
+    {
+    }
+
+    static void manage(QWidget *)
+    {
+    }
+
+    static void last_manage(QWidget *, QWidget *, const QString &)
+    {
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KAcceleratorManager" [=[
+#pragma once
+#include "kacceleratormanager.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kselectaction.h" [=[
+#pragma once
+
+#include <QAction>
+#include <QActionGroup>
+#include <QIcon>
+#include <QMenu>
+#include <QString>
+
+class KSelectAction : public QAction
+{
+public:
+    enum ToolBarMode {
+        MenuMode
+    };
+
+    explicit KSelectAction(QObject *parent = nullptr)
+        : QAction(parent)
+        , m_selectableActionGroup(new QActionGroup(this))
+    {
+    }
+
+    explicit KSelectAction(const QString &text, QObject *parent = nullptr)
+        : QAction(text, parent)
+        , m_selectableActionGroup(new QActionGroup(this))
+    {
+    }
+
+    KSelectAction(const QIcon &icon, const QString &text, QObject *parent = nullptr)
+        : QAction(icon, text, parent)
+        , m_selectableActionGroup(new QActionGroup(this))
+    {
+    }
+
+    void setToolBarMode(ToolBarMode)
+    {
+    }
+
+    void addAction(QAction *action)
+    {
+        ensureMenu();
+        menu()->addAction(action);
+        m_selectableActionGroup->addAction(action);
+    }
+
+    virtual QAction *removeAction(QAction *action)
+    {
+        if (menu()) {
+            menu()->removeAction(action);
+        }
+        m_selectableActionGroup->removeAction(action);
+        return action;
+    }
+
+    void clear()
+    {
+        if (menu()) {
+            menu()->clear();
+        }
+        for (QAction *action : m_selectableActionGroup->actions()) {
+            m_selectableActionGroup->removeAction(action);
+        }
+    }
+
+    QActionGroup *selectableActionGroup() const
+    {
+        return m_selectableActionGroup;
+    }
+
+private:
+    void ensureMenu()
+    {
+        if (!menu()) {
+            setMenu(new QMenu());
+        }
+    }
+
+    QActionGroup *m_selectableActionGroup = nullptr;
+};
+]=])
+file(WRITE "${_external_include_dir}/KSelectAction" [=[
+#pragma once
+#include "kselectaction.h"
+]=])
+
 file(WRITE "${_external_include_dir}/kpluginfactory.h" [=[
 #pragma once
 
@@ -1226,6 +1454,63 @@ file(WRITE "${_external_include_dir}/quazipfileinfo.h" [=[
 class QuaZipFileInfo
 {
 };
+]=])
+
+file(WRITE "${_external_include_dir}/lager/state.hpp" [=[
+#pragma once
+
+namespace lager {
+
+struct automatic_tag
+{
+};
+
+template <typename T, typename Tag = automatic_tag>
+class state
+{
+public:
+    state() = default;
+    explicit state(const T &value)
+        : m_value(value)
+    {
+    }
+
+    T get() const
+    {
+        return m_value;
+    }
+
+    void set(const T &value)
+    {
+        m_value = value;
+    }
+
+private:
+    T m_value {};
+};
+
+template <typename T>
+class qt_cursor
+{
+public:
+    qt_cursor() = default;
+
+    template <typename State>
+    explicit qt_cursor(const State &)
+    {
+    }
+};
+
+} // namespace lager
+]=])
+
+file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
+#pragma once
+
+#include "../state.hpp"
+
+#define LAGER_QT_CURSOR(type, name) lager::qt_cursor<type> name
+#define LAGER_QT(name) name
 ]=])
 
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
