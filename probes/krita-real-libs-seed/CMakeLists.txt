@@ -2556,3 +2556,5 @@ target_include_directories(kritapigment
         "${_external_include_dir}")
 target_compile_definitions(kritapigment PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritapigment PRIVATE
+    -fno-operator-names)
