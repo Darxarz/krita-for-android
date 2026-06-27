@@ -128,6 +128,13 @@ if(EXISTS "/usr/include/boost")
         "/usr/include/boost" "${_external_include_dir}/boost")
 endif()
 
+if(EXISTS "/usr/include/xsimd")
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink
+        "/usr/include/xsimd" "${_external_include_dir}/xsimd")
+else()
+    message(FATAL_ERROR "Missing xsimd headers from libxsimd-dev")
+endif()
+
 file(WRITE "${_external_include_dir}/klocalizedstring.h" [=[
 #pragma once
 
@@ -216,7 +223,10 @@ inline QString i18ncp(const char *, const char *singular, const char *, Args &&.
     return QString::fromUtf8(singular ? singular : "");
 }
 ]=])
-file(COPY_FILE "${_external_include_dir}/klocalizedstring.h" "${_external_include_dir}/KLocalizedString")
+file(WRITE "${_external_include_dir}/KLocalizedString" [=[
+#pragma once
+#include "klocalizedstring.h"
+]=])
 
 file(WRITE "${_external_include_dir}/kconfig.h" [=[
 #pragma once
@@ -225,7 +235,10 @@ class KConfig
 {
 };
 ]=])
-file(COPY_FILE "${_external_include_dir}/kconfig.h" "${_external_include_dir}/KConfig")
+file(WRITE "${_external_include_dir}/KConfig" [=[
+#pragma once
+#include "kconfig.h"
+]=])
 
 file(WRITE "${_external_include_dir}/ksharedconfig.h" [=[
 #pragma once
@@ -248,7 +261,10 @@ public:
     KConfigGroup group(const char *) const;
 };
 ]=])
-file(COPY_FILE "${_external_include_dir}/ksharedconfig.h" "${_external_include_dir}/KSharedConfig")
+file(WRITE "${_external_include_dir}/KSharedConfig" [=[
+#pragma once
+#include "ksharedconfig.h"
+]=])
 
 file(WRITE "${_external_include_dir}/kconfiggroup.h" [=[
 #pragma once
@@ -281,7 +297,10 @@ inline KConfigGroup KSharedConfig::group(const char *) const
     return KConfigGroup(KSharedConfig::Ptr(), "");
 }
 ]=])
-file(COPY_FILE "${_external_include_dir}/kconfiggroup.h" "${_external_include_dir}/KConfigGroup")
+file(WRITE "${_external_include_dir}/KConfigGroup" [=[
+#pragma once
+#include "kconfiggroup.h"
+]=])
 
 file(WRITE "${_external_include_dir}/kpluginfactory.h" [=[
 #pragma once
@@ -307,7 +326,10 @@ public:
     }
 };
 ]=])
-file(COPY_FILE "${_external_include_dir}/kpluginfactory.h" "${_external_include_dir}/KPluginFactory")
+file(WRITE "${_external_include_dir}/KPluginFactory" [=[
+#pragma once
+#include "kpluginfactory.h"
+]=])
 
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
 #pragma once
@@ -585,7 +607,7 @@ set_target_properties(Eigen3::Eigen PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "/usr/include/eigen3")
 
 add_library(xsimd INTERFACE)
-target_include_directories(xsimd INTERFACE "/usr/include")
+target_include_directories(xsimd INTERFACE "${_external_include_dir}")
 
 add_library(lager INTERFACE)
 target_include_directories(lager INTERFACE "${_external_include_dir}")
