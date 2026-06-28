@@ -208,6 +208,37 @@ private:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "KoZoomToolWidget")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QGridLayout>
+#include <QRadioButton>
+#include <QWidget>
+
+namespace Ui {
+
+class ZoomToolWidget
+{
+public:
+    QRadioButton *zoomInButton = nullptr;
+    QRadioButton *zoomOutButton = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QGridLayout(parent);
+        zoomInButton = new QRadioButton(QStringLiteral("&Zoom In"), parent);
+        zoomOutButton = new QRadioButton(QStringLiteral("Zoo&m Out"), parent);
+        zoomInButton->setFocusPolicy(Qt::NoFocus);
+        zoomOutButton->setFocusPolicy(Qt::NoFocus);
+        layout->addWidget(zoomInButton, 0, 0);
+        layout->addWidget(zoomOutButton, 0, 1);
+        layout->setRowStretch(1, 1);
+    }
+};
+
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
@@ -2910,4 +2941,5 @@ target_include_directories(kritaflake
 target_compile_definitions(kritaflake PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritaflake PRIVATE
-    -fno-operator-names)
+    -fno-operator-names
+    -include QIcon)
