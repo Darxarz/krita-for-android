@@ -293,6 +293,8 @@ public:
 };
 
 } // namespace Ui
+
+using Ui_]=] "${_ui_class}" [=[ = Ui::]=] "${_ui_class}" [=[;
 ]=])
         endif()
 
@@ -1306,6 +1308,12 @@ file(WRITE "${_external_include_dir}/kwidgetsaddons_version.h" [=[
 #define KWIDGETSADDONS_VERSION_PATCH 0
 ]=])
 
+file(WRITE "${_external_include_dir}/config-seexpr.h" [=[
+#pragma once
+
+#define HAVE_SEEXPR 0
+]=])
+
 file(WRITE "${_external_include_dir}/kaboutdata.h" [=[
 #pragma once
 
@@ -1791,16 +1799,35 @@ public:
     explicit KSeparator(QWidget *parent = nullptr)
         : QFrame(parent)
     {
-        setFrameShape(QFrame::HLine);
+        applyOrientation(Qt::Horizontal);
         setFrameShadow(QFrame::Sunken);
     }
 
     explicit KSeparator(Qt::Orientation orientation, QWidget *parent = nullptr)
         : QFrame(parent)
     {
-        setFrameShape(orientation == Qt::Horizontal ? QFrame::HLine : QFrame::VLine);
+        applyOrientation(orientation);
         setFrameShadow(QFrame::Sunken);
     }
+
+    void setOrientation(Qt::Orientation orientation)
+    {
+        applyOrientation(orientation);
+    }
+
+    Qt::Orientation orientation() const
+    {
+        return m_orientation;
+    }
+
+private:
+    void applyOrientation(Qt::Orientation orientation)
+    {
+        m_orientation = orientation;
+        setFrameShape(m_orientation == Qt::Horizontal ? QFrame::HLine : QFrame::VLine);
+    }
+
+    Qt::Orientation m_orientation = Qt::Horizontal;
 };
 ]=])
 
