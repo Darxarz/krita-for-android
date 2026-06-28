@@ -399,6 +399,23 @@ else()
     message(FATAL_ERROR "Missing fontconfig headers from libfontconfig1-dev")
 endif()
 
+foreach(_seed_unibreak_header IN ITEMS
+        eastasianwidthdef.h
+        graphemebreak.h
+        linebreak.h
+        linebreakdef.h
+        unibreakbase.h
+        unibreakdef.h
+        wordbreak.h)
+    if(EXISTS "/usr/include/${_seed_unibreak_header}")
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "/usr/include/${_seed_unibreak_header}"
+            "${_external_include_dir}/${_seed_unibreak_header}")
+    else()
+        message(FATAL_ERROR "Missing ${_seed_unibreak_header} from libunibreak-dev")
+    endif()
+endforeach()
+
 file(WRITE "${_external_include_dir}/klocalizedstring.h" [=[
 #pragma once
 
