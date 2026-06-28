@@ -1381,6 +1381,45 @@ file(WRITE "${_external_include_dir}/KTitleWidget" [=[
 #include "ktitlewidget.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/ksqueezedtextlabel.h" [=[
+#pragma once
+
+#include <QLabel>
+#include <QString>
+#include <Qt>
+
+class KSqueezedTextLabel : public QLabel
+{
+public:
+    explicit KSqueezedTextLabel(QWidget *parent = nullptr)
+        : QLabel(parent)
+    {
+    }
+
+    explicit KSqueezedTextLabel(const QString &text, QWidget *parent = nullptr)
+        : QLabel(text, parent)
+    {
+    }
+
+    void setTextElideMode(Qt::TextElideMode mode)
+    {
+        m_elideMode = mode;
+    }
+
+    Qt::TextElideMode textElideMode() const
+    {
+        return m_elideMode;
+    }
+
+private:
+    Qt::TextElideMode m_elideMode = Qt::ElideMiddle;
+};
+]=])
+file(WRITE "${_external_include_dir}/KSqueezedTextLabel" [=[
+#pragma once
+#include "ksqueezedtextlabel.h"
+]=])
+
 file(WRITE "${_external_include_dir}/kwidgetsaddons_version.h" [=[
 #pragma once
 
