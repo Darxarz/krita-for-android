@@ -830,6 +830,11 @@ public:
         return QString();
     }
 
+    QMap<QString, QString> entryMap(const QString & = QString()) const
+    {
+        return {};
+    }
+
     void sync()
     {
     }
