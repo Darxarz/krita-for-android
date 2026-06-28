@@ -629,6 +629,13 @@ file(WRITE "${_external_include_dir}/KLocalizedString" [=[
 #include "klocalizedstring.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/seed_kritawidgets_forced_includes.h" [=[
+#pragma once
+
+#include <QSet>
+#include "klocalizedstring.h"
+]=])
+
 file(WRITE "${_external_include_dir}/kconfig.h" [=[
 #pragma once
 
@@ -3658,8 +3665,7 @@ target_compile_definitions(kritawidgets PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritawidgets PRIVATE
     -fno-operator-names
-    -include QSet
-    -include "${_external_include_dir}/klocalizedstring.h")
+    -include "${_external_include_dir}/seed_kritawidgets_forced_includes.h")
 
 disable_seed_tests(libs/psdutils)
 
