@@ -239,6 +239,71 @@ public:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "KoConfigAuthorPage")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QFormLayout>
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QString>
+#include <QTableView>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include <QWidget>
+
+namespace Ui {
+
+class KoConfigAuthorPage
+{
+public:
+    QLineEdit *leNickName = nullptr;
+    QLineEdit *leFirstName = nullptr;
+    QLineEdit *leInitials = nullptr;
+    QLineEdit *leLastName = nullptr;
+    QLineEdit *leTitle = nullptr;
+    QLineEdit *lePosition = nullptr;
+    QLineEdit *leCompany = nullptr;
+    QTableView *tblContactInfo = nullptr;
+    QToolButton *btnAdd = nullptr;
+    QToolButton *btnRemove = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QVBoxLayout(parent);
+        auto *form = new QFormLayout();
+        layout->addLayout(form);
+
+        leNickName = addLineEdit(parent, form, QStringLiteral("Nickname"));
+        leFirstName = addLineEdit(parent, form, QStringLiteral("First name"));
+        leInitials = addLineEdit(parent, form, QStringLiteral("Initials"));
+        leLastName = addLineEdit(parent, form, QStringLiteral("Last name"));
+        leTitle = addLineEdit(parent, form, QStringLiteral("Title"));
+        lePosition = addLineEdit(parent, form, QStringLiteral("Position"));
+        leCompany = addLineEdit(parent, form, QStringLiteral("Company"));
+
+        tblContactInfo = new QTableView(parent);
+        layout->addWidget(tblContactInfo);
+
+        auto *buttons = new QHBoxLayout();
+        btnAdd = new QToolButton(parent);
+        btnRemove = new QToolButton(parent);
+        buttons->addWidget(btnAdd);
+        buttons->addWidget(btnRemove);
+        layout->addLayout(buttons);
+    }
+
+private:
+    QLineEdit *addLineEdit(QWidget *parent, QFormLayout *form, const QString &label)
+    {
+        auto *lineEdit = new QLineEdit(parent);
+        form->addRow(label, lineEdit);
+        return lineEdit;
+    }
+};
+
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
