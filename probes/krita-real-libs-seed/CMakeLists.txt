@@ -304,6 +304,35 @@ private:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "wdg_file_name_requester")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QToolButton>
+#include <QWidget>
+
+namespace Ui {
+
+class WdgFileNameRequester
+{
+public:
+    QLineEdit *txtFileName = nullptr;
+    QToolButton *btnSelectFile = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QHBoxLayout(parent);
+        txtFileName = new QLineEdit(parent);
+        btnSelectFile = new QToolButton(parent);
+        layout->addWidget(txtFileName);
+        layout->addWidget(btnSelectFile);
+    }
+};
+
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
@@ -3629,7 +3658,8 @@ target_compile_definitions(kritawidgets PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritawidgets PRIVATE
     -fno-operator-names
-    -include QSet)
+    -include QSet
+    -include klocalizedstring.h)
 
 disable_seed_tests(libs/psdutils)
 
