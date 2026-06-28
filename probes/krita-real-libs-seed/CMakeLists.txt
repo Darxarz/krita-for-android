@@ -916,6 +916,16 @@ inline KGuiItem defaults()
     return KGuiItem(QStringLiteral("Defaults"));
 }
 
+inline KGuiItem help()
+{
+    return KGuiItem(QStringLiteral("Help"));
+}
+
+inline KGuiItem reset()
+{
+    return KGuiItem(QStringLiteral("Reset"));
+}
+
 inline KGuiItem del()
 {
     return KGuiItem(QStringLiteral("Delete"));
@@ -996,6 +1006,201 @@ inline void error(QWidget *, const QString &, const QString & = QString())
 file(WRITE "${_external_include_dir}/KMessageBox" [=[
 #pragma once
 #include "kmessagebox.h"
+]=])
+
+file(WRITE "${_external_include_dir}/khelpclient.h" [=[
+#pragma once
+
+#include <QString>
+
+class KHelpClient
+{
+public:
+    static void invokeHelp(const QString & = QString(), const QString & = QString())
+    {
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KHelpClient" [=[
+#pragma once
+#include "khelpclient.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kurllabel.h" [=[
+#pragma once
+
+#include <QFont>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QString>
+#include <Qt>
+
+class KUrlLabel : public QLabel
+{
+public:
+    explicit KUrlLabel(QWidget *parent = nullptr)
+        : QLabel(parent)
+    {
+    }
+
+    explicit KUrlLabel(const QString &url, const QString &text = QString(), QWidget *parent = nullptr)
+        : QLabel(text.isEmpty() ? url : text, parent)
+        , m_url(url)
+    {
+    }
+
+    void setUrl(const QString &url)
+    {
+        m_url = url;
+    }
+
+    QString url() const
+    {
+        return m_url;
+    }
+
+    void setFloatEnabled(bool)
+    {
+    }
+
+    void setUnderline(bool underline)
+    {
+        QFont currentFont = font();
+        currentFont.setUnderline(underline);
+        setFont(currentFont);
+    }
+
+    void leftClickedUrl()
+    {
+    }
+
+protected:
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (!event || event->button() == Qt::LeftButton) {
+            leftClickedUrl();
+        }
+
+        QLabel::mouseReleaseEvent(event);
+    }
+
+private:
+    QString m_url;
+};
+]=])
+file(WRITE "${_external_include_dir}/KUrlLabel" [=[
+#pragma once
+#include "kurllabel.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kselector.h" [=[
+#pragma once
+
+#include <QPainter>
+#include <QPaintEvent>
+#include <QPoint>
+#include <QWidget>
+#include <Qt>
+#include <QtGlobal>
+
+class KSelector : public QWidget
+{
+public:
+    explicit KSelector(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+    }
+
+    explicit KSelector(Qt::Orientation orientation, QWidget *parent = nullptr)
+        : QWidget(parent)
+        , m_orientation(orientation)
+    {
+    }
+
+    void setMinimum(int value)
+    {
+        m_minimum = value;
+        if (m_value < m_minimum) {
+            m_value = m_minimum;
+        }
+        update();
+    }
+
+    void setMaximum(int value)
+    {
+        m_maximum = value;
+        if (m_value > m_maximum) {
+            m_value = m_maximum;
+        }
+        update();
+    }
+
+    void setRange(int minimum, int maximum)
+    {
+        m_minimum = minimum;
+        m_maximum = maximum;
+        m_value = qBound(m_minimum, m_value, m_maximum);
+        update();
+    }
+
+    int minimum() const
+    {
+        return m_minimum;
+    }
+
+    int maximum() const
+    {
+        return m_maximum;
+    }
+
+    int value() const
+    {
+        return m_value;
+    }
+
+    void setValue(int value)
+    {
+        m_value = qBound(m_minimum, value, m_maximum);
+        update();
+    }
+
+    Qt::Orientation orientation() const
+    {
+        return m_orientation;
+    }
+
+    void setOrientation(Qt::Orientation orientation)
+    {
+        m_orientation = orientation;
+        update();
+    }
+
+protected:
+    virtual void drawContents(QPainter *)
+    {
+    }
+
+    virtual void drawArrow(QPainter *, const QPoint &)
+    {
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        drawContents(&painter);
+        drawArrow(&painter, rect().center());
+    }
+
+private:
+    Qt::Orientation m_orientation = Qt::Horizontal;
+    int m_minimum = 0;
+    int m_maximum = 100;
+    int m_value = 0;
+};
+]=])
+file(WRITE "${_external_include_dir}/KSelector" [=[
+#pragma once
+#include "kselector.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/kpagedialog.h" [=[
