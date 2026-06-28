@@ -121,6 +121,7 @@ jobs:
             config-android-stdio-forwarding.h.cmake \
             config-gsl.h.cmake \
             config-safe-asserts.h.cmake \
+            libs/brush \
             libs/color \
             libs/command \
             libs/flake \
@@ -188,6 +189,7 @@ jobs:
             kritawidgets \
             kritapsdutils \
             kritaimage \
+            kritalibbrush \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -206,6 +208,7 @@ jobs:
           widgets_library="$(find "$build_dir" -name 'libkritawidgets.so' -print -quit)"
           psdutils_library="$(find "$build_dir" -name 'libkritapsdutils.so' -print -quit)"
           image_library="$(find "$build_dir" -name 'libkritaimage.so' -print -quit)"
+          brush_library="$(find "$build_dir" -name 'libkritalibbrush.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -222,6 +225,7 @@ jobs:
           test -n "$widgets_library"
           test -n "$psdutils_library"
           test -n "$image_library"
+          test -n "$brush_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -238,6 +242,7 @@ jobs:
           file "$widgets_library"
           file "$psdutils_library"
           file "$image_library"
+          file "$brush_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -446,6 +451,20 @@ jobs:
 
           "$readelf" -Ws "$image_library" | tee "$RUNNER_TEMP/kritaimage-symbols.txt"
           grep -q "KisImage" "$RUNNER_TEMP/kritaimage-symbols.txt"
+
+          "$readelf" -h "$brush_library" | tee "$RUNNER_TEMP/kritalibbrush-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritalibbrush-elf-header.txt"
+
+          "$readelf" -d "$brush_library" | tee "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libkritaimage.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libkritamultiarch.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Svg_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibbrush-dynamic.txt"
+
+          "$readelf" -Ws "$brush_library" | tee "$RUNNER_TEMP/kritalibbrush-symbols.txt"
+          grep -q "KisBrushRegistry" "$RUNNER_TEMP/kritalibbrush-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

@@ -609,6 +609,14 @@ add_android_qt5_module(Sql)
 add_android_qt5_module(PrintSupport)
 add_android_qt5_module(AndroidExtras)
 
+target_link_libraries(Qt5::Gui INTERFACE Qt5::Core)
+target_link_libraries(Qt5::Widgets INTERFACE Qt5::Gui)
+target_link_libraries(Qt5::Xml INTERFACE Qt5::Core)
+target_link_libraries(Qt5::Svg INTERFACE Qt5::Widgets)
+target_link_libraries(Qt5::Sql INTERFACE Qt5::Core)
+target_link_libraries(Qt5::PrintSupport INTERFACE Qt5::Widgets)
+target_link_libraries(Qt5::AndroidExtras INTERFACE Qt5::Core)
+
 find_program(_qt5_moc_executable
     NAMES moc
     HINTS "${ANDROID_PREFIX}/bin"
@@ -3895,5 +3903,24 @@ target_include_directories(kritaimage
 target_compile_definitions(kritaimage PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritaimage PRIVATE
+    -fno-operator-names
+    -include QIcon)
+
+disable_seed_tests(libs/brush)
+
+set(_kritalibbrush_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritalibbrush")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/brush" "${_kritalibbrush_build_dir}")
+
+target_include_directories(kritalibbrush
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/brush>"
+        "$<BUILD_INTERFACE:${_kritalibbrush_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritalibbrush PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritalibbrush PRIVATE
     -fno-operator-names
     -include QIcon)
