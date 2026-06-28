@@ -113,6 +113,7 @@ jobs:
           fi
           git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
+            config_convolution.h.cmake \
             config-hash-table-implementation.h.cmake \
             KoConfig.h.cmake \
             3rdparty_vendor/raqm \

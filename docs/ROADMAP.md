@@ -291,6 +291,24 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28303022560
 оставшихся prerequisites для `kritaimage` (`kritawidgets`, `kritapsdutils`), затем
 `kritaimage`, `kritalibbrush` и дальше к `kritalibkis` -> `kritaui` -> `PyKrita.krita`.
 
+Следующий dependency cluster закрыт в этом probe: upstream `libs/resourcewidgets`,
+`libs/widgets` и `libs/psdutils` собираются как реальные Android shared libraries
+`libkritaresourcewidgets.so`, `libkritawidgets.so` и `libkritapsdutils.so`. Для
+`kritawidgets` seed добавляет минимальные KDE widget/config shims и точечные generated
+UI headers для `KoConfigAuthorPage`, `wdg_file_name_requester`, `WdgDlgInternalColorSelector`
+и `WdgPaletteListWidget`; upstream source остается прямым sparse checkout.
+
+CI `Krita real libs seed Android` зеленый для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28312002206
+
+Начат следующий слой: upstream `libs/image` добавлен в sparse checkout и seed CMake как
+реальная Android shared library `libkritaimage.so`. Первый compile blocker
+`KSharedConfig::entryMap()` закрыт в generated KDE config shim; также добавлена генерация
+`config_convolution.h` для convolution painter. Дальнейшая проверка временно заблокирована
+GitHub Actions до старта runner из-за account billing/spending limit, не из-за ошибки
+workflow или CMake.
+
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
 ## Phase 4 - APK packaging and runtime init
