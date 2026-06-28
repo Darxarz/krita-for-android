@@ -460,6 +460,53 @@ class WdgDlgInternalColorSelector : public ::Ui_WdgDlgInternalColorSelector
 };
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "WdgPaletteListWidget")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QHBoxLayout>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include <QWidget>
+
+class Ui_WdgPaletteListWidget
+{
+public:
+    QWidget *viewPalette = nullptr;
+    QToolButton *bnAdd = nullptr;
+    QToolButton *bnRemove = nullptr;
+    QToolButton *bnImport = nullptr;
+    QToolButton *bnExport = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QVBoxLayout(parent);
+        viewPalette = new QWidget(parent);
+        layout->addWidget(viewPalette);
+
+        auto *ctrlLine = new QWidget(parent);
+        auto *buttonLayout = new QHBoxLayout(ctrlLine);
+        buttonLayout->addStretch();
+
+        bnAdd = new QToolButton(ctrlLine);
+        bnExport = new QToolButton(ctrlLine);
+        bnImport = new QToolButton(ctrlLine);
+        bnRemove = new QToolButton(ctrlLine);
+
+        buttonLayout->addWidget(bnAdd);
+        buttonLayout->addWidget(bnExport);
+        buttonLayout->addWidget(bnImport);
+        buttonLayout->addWidget(bnRemove);
+        layout->addWidget(ctrlLine);
+    }
+};
+
+namespace Ui {
+class WdgPaletteListWidget : public ::Ui_WdgPaletteListWidget
+{
+};
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
