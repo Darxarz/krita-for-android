@@ -2609,6 +2609,21 @@ foreach(_seed_system_include_dir IN ITEMS
     endif()
 endforeach()
 
+set(_seed_unibreak_include_dir "")
+foreach(_seed_unibreak_candidate IN ITEMS
+        "/usr/include/libunibreak"
+        "/usr/include/unibreak"
+        "/usr/include")
+    if(EXISTS "${_seed_unibreak_candidate}/graphemebreak.h")
+        set(_seed_unibreak_include_dir "${_seed_unibreak_candidate}")
+        break()
+    endif()
+endforeach()
+if(NOT _seed_unibreak_include_dir)
+    message(FATAL_ERROR "Missing libunibreak headers from libunibreak-dev")
+endif()
+list(APPEND _seed_system_include_dirs "${_seed_unibreak_include_dir}")
+
 foreach(_seed_font_target IN ITEMS
         Freetype::Freetype
         HarfBuzz::HarfBuzz
