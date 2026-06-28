@@ -127,9 +127,12 @@ jobs:
             libs/metadata \
             libs/multiarch \
             libs/pigment \
+            libs/psdutils \
             libs/resources \
+            libs/resourcewidgets \
             libs/store \
             libs/version \
+            libs/widgets \
             libs/widgetutils \
             plugins/extensions/pykrita
 
@@ -178,6 +181,9 @@ jobs:
             kritapigment \
             kritametadata \
             kritaflake \
+            kritaresourcewidgets \
+            kritawidgets \
+            kritapsdutils \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -192,6 +198,9 @@ jobs:
           pigment_library="$(find "$build_dir" -name 'libkritapigment.so' -print -quit)"
           metadata_library="$(find "$build_dir" -name 'libkritametadata.so' -print -quit)"
           flake_library="$(find "$build_dir" -name 'libkritaflake.so' -print -quit)"
+          resourcewidgets_library="$(find "$build_dir" -name 'libkritaresourcewidgets.so' -print -quit)"
+          widgets_library="$(find "$build_dir" -name 'libkritawidgets.so' -print -quit)"
+          psdutils_library="$(find "$build_dir" -name 'libkritapsdutils.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -204,6 +213,9 @@ jobs:
           test -n "$pigment_library"
           test -n "$metadata_library"
           test -n "$flake_library"
+          test -n "$resourcewidgets_library"
+          test -n "$widgets_library"
+          test -n "$psdutils_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -216,6 +228,9 @@ jobs:
           file "$pigment_library"
           file "$metadata_library"
           file "$flake_library"
+          file "$resourcewidgets_library"
+          file "$widgets_library"
+          file "$psdutils_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -363,6 +378,53 @@ jobs:
 
           "$readelf" -Ws "$flake_library" | tee "$RUNNER_TEMP/kritaflake-symbols.txt"
           grep -q "KoShapeRegistry" "$RUNNER_TEMP/kritaflake-symbols.txt"
+
+          "$readelf" -h "$resourcewidgets_library" | tee "$RUNNER_TEMP/kritaresourcewidgets-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaresourcewidgets-elf-header.txt"
+
+          "$readelf" -d "$resourcewidgets_library" | tee "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaplugin.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritastore.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaresources.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritawidgetutils.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Sql_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaresourcewidgets-dynamic.txt"
+
+          "$readelf" -Ws "$resourcewidgets_library" | tee "$RUNNER_TEMP/kritaresourcewidgets-symbols.txt"
+          grep -q "KisResourceItemChooser" "$RUNNER_TEMP/kritaresourcewidgets-symbols.txt"
+
+          "$readelf" -h "$widgets_library" | tee "$RUNNER_TEMP/kritawidgets-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritawidgets-elf-header.txt"
+
+          "$readelf" -d "$widgets_library" | tee "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaflake.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritapigment.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritawidgetutils.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaresources.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libkritaresourcewidgets.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+          grep -q "Shared library: \\[libQt5PrintSupport_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritawidgets-dynamic.txt"
+
+          "$readelf" -Ws "$widgets_library" | tee "$RUNNER_TEMP/kritawidgets-symbols.txt"
+          grep -q "KoZoomAction" "$RUNNER_TEMP/kritawidgets-symbols.txt"
+
+          "$readelf" -h "$psdutils_library" | tee "$RUNNER_TEMP/kritapsdutils-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritapsdutils-elf-header.txt"
+
+          "$readelf" -d "$psdutils_library" | tee "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+          grep -q "Shared library: \\[libkritapigment.so\\]" "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+          grep -q "Shared library: \\[libkritaglobal.so\\]" "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+          grep -q "Shared library: \\[libkritaflake.so\\]" "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritapsdutils-dynamic.txt"
+
+          "$readelf" -Ws "$psdutils_library" | tee "$RUNNER_TEMP/kritapsdutils-symbols.txt"
+          grep -q "KisAslReader" "$RUNNER_TEMP/kritapsdutils-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

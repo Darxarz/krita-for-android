@@ -2601,11 +2601,15 @@ add_library(KF5::CoreAddons INTERFACE IMPORTED GLOBAL)
 set_target_properties(KF5::CoreAddons PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
 
-foreach(_kf_target IN ITEMS ItemViews ConfigGui GuiAddons WidgetsAddons)
+foreach(_kf_target IN ITEMS ItemViews ConfigGui GuiAddons WidgetsAddons Completion)
     add_library(KF5::${_kf_target} INTERFACE IMPORTED GLOBAL)
     set_target_properties(KF5::${_kf_target} PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${_external_include_dir}")
 endforeach()
+
+add_library(ZLIB::ZLIB INTERFACE IMPORTED GLOBAL)
+set_target_properties(ZLIB::ZLIB PROPERTIES
+    INTERFACE_LINK_LIBRARIES z)
 
 add_library(Boost::boost INTERFACE IMPORTED GLOBAL)
 set_target_properties(Boost::boost PROPERTIES
@@ -3140,3 +3144,55 @@ target_compile_options(kritaflake PRIVATE
     -include QIcon)
 target_link_libraries(kritaflake PRIVATE
     seed_text_dep_stubs)
+
+set(_kritaresourcewidgets_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaresourcewidgets")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/resourcewidgets" "${_kritaresourcewidgets_build_dir}")
+
+target_include_directories(kritaresourcewidgets
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/resourcewidgets>"
+        "$<BUILD_INTERFACE:${_kritaresourcewidgets_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaresourcewidgets PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritaresourcewidgets PRIVATE
+    -fno-operator-names)
+
+disable_seed_tests(libs/widgets)
+
+set(_kritawidgets_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritawidgets")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/widgets" "${_kritawidgets_build_dir}")
+
+target_include_directories(kritawidgets
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/widgets>"
+        "$<BUILD_INTERFACE:${_kritawidgets_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritawidgets PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritawidgets PRIVATE
+    -fno-operator-names)
+
+disable_seed_tests(libs/psdutils)
+
+set(_kritapsdutils_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritapsdutils")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/psdutils" "${_kritapsdutils_build_dir}")
+
+target_include_directories(kritapsdutils
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/psdutils>"
+        "$<BUILD_INTERFACE:${_kritapsdutils_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritapsdutils PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritapsdutils PRIVATE
+    -fno-operator-names)
