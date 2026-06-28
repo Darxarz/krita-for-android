@@ -333,6 +333,133 @@ public:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "WdgDlgInternalColorSelector")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFrame>
+#include <QHBoxLayout>
+#include <QString>
+#include <QTabWidget>
+#include <QVBoxLayout>
+#include <QWidget>
+
+#include "KisPaletteComboBox.h"
+#include "KisPopupButton.h"
+#include "KisSpinboxHSXSelector.h"
+#include "KisVisualColorSelector.h"
+#include "KoColorPatch.h"
+#include "kis_palette_view.h"
+#include "kis_spinbox_color_selector.h"
+
+class Ui_WdgDlgInternalColorSelector
+{
+public:
+    KisVisualColorSelector *visualSelector = nullptr;
+    QTabWidget *tabWidget = nullptr;
+    QWidget *tab_channel = nullptr;
+    KisSpinboxColorSelector *spinboxselector = nullptr;
+    QWidget *tab_hsx = nullptr;
+    KisSpinboxHSXSelector *spinboxHSXSelector = nullptr;
+    KoColorPatch *currentColor = nullptr;
+    KoColorPatch *previousColor = nullptr;
+    QVBoxLayout *rightPane = nullptr;
+    KisPaletteView *paletteBox = nullptr;
+    KisPopupButton *bnPaletteChooser = nullptr;
+    KisPaletteComboBox *cmbNameList = nullptr;
+    QWidget *screenColorSamplerWidget = nullptr;
+    QDialogButtonBox *buttonBox = nullptr;
+
+    void setupUi(QDialog *parent)
+    {
+        setupUi(static_cast<QWidget *>(parent));
+    }
+
+    void setupUi(QWidget *parent)
+    {
+        auto *verticalLayout = new QVBoxLayout(parent);
+        auto *horizontal = new QHBoxLayout();
+        verticalLayout->addLayout(horizontal);
+
+        auto *leftPane = new QVBoxLayout();
+        horizontal->addLayout(leftPane);
+
+        visualSelector = new KisVisualColorSelector(parent);
+        visualSelector->setMinimumSize(90, 90);
+        leftPane->addWidget(visualSelector);
+
+        tabWidget = new QTabWidget(parent);
+        tabWidget->setTabBarAutoHide(true);
+
+        tab_channel = new QWidget(tabWidget);
+        auto *channelLayout = new QVBoxLayout(tab_channel);
+        channelLayout->setContentsMargins(0, 0, 0, 0);
+        channelLayout->setSpacing(0);
+        spinboxselector = new KisSpinboxColorSelector(tab_channel);
+        channelLayout->addWidget(spinboxselector);
+        tabWidget->addTab(tab_channel, QStringLiteral("Channels"));
+
+        tab_hsx = new QWidget(tabWidget);
+        auto *hsxLayout = new QVBoxLayout(tab_hsx);
+        hsxLayout->setContentsMargins(0, 0, 0, 0);
+        hsxLayout->setSpacing(0);
+        spinboxHSXSelector = new KisSpinboxHSXSelector(tab_hsx);
+        hsxLayout->addWidget(spinboxHSXSelector);
+        tabWidget->addTab(tab_hsx, QStringLiteral("Unknown"));
+
+        leftPane->addWidget(tabWidget);
+
+        auto *frame = new QFrame(parent);
+        frame->setFrameShape(QFrame::StyledPanel);
+        frame->setFrameShadow(QFrame::Sunken);
+        frame->setLineWidth(2);
+        frame->setMidLineWidth(2);
+        auto *nextPrevLayout = new QHBoxLayout(frame);
+        nextPrevLayout->setContentsMargins(0, 0, 0, 0);
+        nextPrevLayout->setSpacing(0);
+        currentColor = new KoColorPatch(frame);
+        currentColor->setMinimumSize(50, 70);
+        previousColor = new KoColorPatch(frame);
+        previousColor->setMinimumSize(25, 25);
+        nextPrevLayout->addWidget(currentColor);
+        nextPrevLayout->addWidget(previousColor);
+        leftPane->addWidget(frame);
+
+        rightPane = new QVBoxLayout();
+        horizontal->addLayout(rightPane);
+
+        paletteBox = new KisPaletteView(parent);
+        paletteBox->setMinimumWidth(90);
+        rightPane->addWidget(paletteBox);
+
+        auto *paletteRow = new QHBoxLayout();
+        paletteRow->setContentsMargins(0, 0, 0, 0);
+        rightPane->addLayout(paletteRow);
+        bnPaletteChooser = new KisPopupButton(parent);
+        bnPaletteChooser->setMinimumWidth(50);
+        cmbNameList = new KisPaletteComboBox(parent);
+        cmbNameList->setEditable(true);
+        paletteRow->addWidget(bnPaletteChooser);
+        paletteRow->addWidget(cmbNameList);
+
+        screenColorSamplerWidget = new QWidget(parent);
+        screenColorSamplerWidget->setMinimumSize(50, 50);
+        rightPane->addWidget(screenColorSamplerWidget);
+
+        buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Ok, parent);
+        buttonBox->setOrientation(Qt::Horizontal);
+        verticalLayout->addWidget(buttonBox);
+    }
+};
+
+namespace Ui {
+class WdgDlgInternalColorSelector : public ::Ui_WdgDlgInternalColorSelector
+{
+};
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "kshortcutwidget")
             file(WRITE "${_generated_header}" [=[
 #pragma once
