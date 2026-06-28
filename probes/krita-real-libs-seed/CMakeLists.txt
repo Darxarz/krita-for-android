@@ -2655,6 +2655,166 @@ foreach(_seed_font_target IN ITEMS
         INTERFACE_INCLUDE_DIRECTORIES "${_seed_system_include_dirs}")
 endforeach()
 
+set(_seed_text_dep_stubs_source "${CMAKE_CURRENT_BINARY_DIR}/seed_text_dep_stubs.c")
+file(WRITE "${_seed_text_dep_stubs_source}" [=[
+#include <stddef.h>
+#include <stdint.h>
+
+typedef void seed_void;
+static unsigned int seed_count_zero = 0;
+
+int FT_Bitmap_Embolden(void *library, void *bitmap, long xStrength, long yStrength) { (void)library; (void)bitmap; (void)xStrength; (void)yStrength; return 0; }
+int FT_Done_Face(void *face) { (void)face; return 0; }
+int FT_Done_FreeType(void *library) { (void)library; return 0; }
+int FT_Done_MM_Var(void *library, void *amaster) { (void)library; (void)amaster; return 0; }
+unsigned int FT_Get_Char_Index(void *face, unsigned long charcode) { (void)face; (void)charcode; return 0; }
+int FT_Get_Color_Glyph_Layer(void *face, unsigned int baseGlyph, unsigned int *aglyphIndex, unsigned int *acolorIndex, void *iterator) { (void)face; (void)baseGlyph; (void)iterator; if (aglyphIndex) *aglyphIndex = 0; if (acolorIndex) *acolorIndex = 0; return 0; }
+unsigned long FT_Get_First_Char(void *face, unsigned int *agindex) { (void)face; if (agindex) *agindex = 0; return 0; }
+int FT_Get_MM_Var(void *face, void **amaster) { (void)face; if (amaster) *amaster = NULL; return 1; }
+unsigned long FT_Get_Next_Char(void *face, unsigned long charcode, unsigned int *agindex) { (void)face; (void)charcode; if (agindex) *agindex = 0; return 0; }
+void *FT_Get_Sfnt_Table(void *face, unsigned int tag) { (void)face; (void)tag; return NULL; }
+void FT_Get_Transform(void *face, void *matrix, void *delta) { (void)face; (void)matrix; (void)delta; }
+int FT_GlyphSlot_Own_Bitmap(void *slot) { (void)slot; return 0; }
+int FT_Init_FreeType(void **alibrary) { if (alibrary) *alibrary = NULL; return 0; }
+int FT_Load_Glyph(void *face, unsigned int glyphIndex, int loadFlags) { (void)face; (void)glyphIndex; (void)loadFlags; return 1; }
+long FT_MulFix(long a, long b) { return (a * b) / 65536; }
+int FT_New_Face(void *library, const char *filepathname, long faceIndex, void **aface) { (void)library; (void)filepathname; (void)faceIndex; if (aface) *aface = NULL; return 1; }
+int FT_Outline_Embolden(void *outline, long strength) { (void)outline; (void)strength; return 0; }
+int FT_Palette_Select(void *face, unsigned short paletteIndex, void *apalette) { (void)face; (void)paletteIndex; (void)apalette; return 1; }
+int FT_Reference_Face(void *face) { (void)face; return 0; }
+int FT_Render_Glyph(void *slot, int renderMode) { (void)slot; (void)renderMode; return 1; }
+int FT_Select_Size(void *face, int strikeIndex) { (void)face; (void)strikeIndex; return 1; }
+int FT_Set_Charmap(void *face, void *charmap) { (void)face; (void)charmap; return 1; }
+int FT_Set_Char_Size(void *face, long charWidth, long charHeight, unsigned int horzResolution, unsigned int vertResolution) { (void)face; (void)charWidth; (void)charHeight; (void)horzResolution; (void)vertResolution; return 1; }
+void FT_Set_Transform(void *face, void *matrix, void *delta) { (void)face; (void)matrix; (void)delta; }
+int FT_Set_Var_Design_Coordinates(void *face, unsigned int numCoords, long *coords) { (void)face; (void)numCoords; (void)coords; return 1; }
+void FT_Vector_Transform(void *vector, const void *matrix) { (void)vector; (void)matrix; }
+
+void hb_blob_destroy(void *blob) { (void)blob; }
+const char *hb_blob_get_data(void *blob, unsigned int *length) { (void)blob; if (length) *length = 0; return ""; }
+unsigned int hb_blob_get_length(void *blob) { (void)blob; return 0; }
+void hb_buffer_add_utf32(void *buffer, const uint32_t *text, int textLength, unsigned int itemOffset, int itemLength) { (void)buffer; (void)text; (void)textLength; (void)itemOffset; (void)itemLength; }
+void *hb_buffer_create(void) { return NULL; }
+void hb_buffer_destroy(void *buffer) { (void)buffer; }
+void *hb_buffer_get_glyph_infos(void *buffer, unsigned int *length) { (void)buffer; if (length) *length = 0; return NULL; }
+void *hb_buffer_get_glyph_positions(void *buffer, unsigned int *length) { (void)buffer; if (length) *length = 0; return NULL; }
+unsigned int hb_buffer_get_length(void *buffer) { (void)buffer; return 0; }
+void hb_buffer_reset(void *buffer) { (void)buffer; }
+void hb_buffer_set_direction(void *buffer, int direction) { (void)buffer; (void)direction; }
+void hb_buffer_set_flags(void *buffer, int flags) { (void)buffer; (void)flags; }
+void hb_buffer_set_invisible_glyph(void *buffer, unsigned int glyph) { (void)buffer; (void)glyph; }
+void hb_buffer_set_language(void *buffer, void *language) { (void)buffer; (void)language; }
+void hb_buffer_set_script(void *buffer, int script) { (void)buffer; (void)script; }
+const char *hb_direction_to_string(int direction) { (void)direction; return "ltr"; }
+void hb_face_collect_variation_selectors(void *face, void *out) { (void)face; (void)out; }
+void hb_face_collect_variation_unicodes(void *face, unsigned int variationSelector, void *out) { (void)face; (void)variationSelector; (void)out; }
+void hb_face_destroy(void *face) { (void)face; }
+int hb_feature_from_string(const char *string, int length, void *feature) { (void)string; (void)length; (void)feature; return 0; }
+void hb_font_destroy(void *font) { (void)font; }
+void *hb_ft_face_create_referenced(void *ftFace) { (void)ftFace; return NULL; }
+void *hb_ft_font_create_referenced(void *ftFace) { (void)ftFace; return NULL; }
+void *hb_ft_font_get_face(void *font) { (void)font; return NULL; }
+void hb_ft_font_set_load_flags(void *font, int loadFlags) { (void)font; (void)loadFlags; }
+void *hb_language_from_string(const char *string, int length) { (void)string; (void)length; return NULL; }
+void *hb_language_get_default(void) { return NULL; }
+const char *hb_language_to_string(void *language) { (void)language; return ""; }
+int hb_ot_color_has_layers(void *face) { (void)face; return 0; }
+int hb_ot_color_has_paint(void *face) { (void)face; return 0; }
+int hb_ot_color_has_png(void *face) { (void)face; return 0; }
+int hb_ot_color_has_svg(void *face) { (void)face; return 0; }
+unsigned int hb_ot_layout_feature_get_lookups(void *face, unsigned int tableTag, unsigned int featureIndex, unsigned int startOffset, unsigned int *lookupCount, unsigned int *lookupIndexes) { (void)face; (void)tableTag; (void)featureIndex; (void)startOffset; (void)lookupIndexes; if (lookupCount) *lookupCount = 0; return 0; }
+int hb_ot_layout_feature_get_name_ids(void *face, unsigned int tableTag, unsigned int featureIndex, unsigned int *labelId, unsigned int *tooltipId, unsigned int *sampleId, unsigned int *numNamedParametersId, unsigned int *firstParamId) { (void)face; (void)tableTag; (void)featureIndex; if (labelId) *labelId = 0; if (tooltipId) *tooltipId = 0; if (sampleId) *sampleId = 0; if (numNamedParametersId) *numNamedParametersId = 0; if (firstParamId) *firstParamId = 0; return 0; }
+int hb_ot_layout_get_baseline(void *font, unsigned int baselineTag, int direction, unsigned int scriptTag, unsigned int languageTag, int *coord) { (void)font; (void)baselineTag; (void)direction; (void)scriptTag; (void)languageTag; if (coord) *coord = 0; return 0; }
+void hb_ot_layout_get_baseline_with_fallback(void *font, unsigned int baselineTag, int direction, unsigned int scriptTag, unsigned int languageTag, int *coord) { (void)font; (void)baselineTag; (void)direction; (void)scriptTag; (void)languageTag; if (coord) *coord = 0; }
+unsigned int hb_ot_layout_get_ligature_carets(void *font, int direction, unsigned int glyph, unsigned int startOffset, unsigned int *caretCount, int *caretArray) { (void)font; (void)direction; (void)glyph; (void)startOffset; (void)caretArray; if (caretCount) *caretCount = 0; return 0; }
+int hb_ot_layout_get_size_params(void *face, unsigned int *designSize, unsigned int *subfamilyId, unsigned int *subfamilyNameId, unsigned int *rangeStart, unsigned int *rangeEnd) { (void)face; if (designSize) *designSize = 0; if (subfamilyId) *subfamilyId = 0; if (subfamilyNameId) *subfamilyNameId = 0; if (rangeStart) *rangeStart = 0; if (rangeEnd) *rangeEnd = 0; return 0; }
+int hb_ot_layout_language_find_feature(void *face, unsigned int tableTag, unsigned int scriptIndex, unsigned int languageIndex, unsigned int featureTag, unsigned int *featureIndex) { (void)face; (void)tableTag; (void)scriptIndex; (void)languageIndex; (void)featureTag; if (featureIndex) *featureIndex = 0; return 0; }
+unsigned int hb_ot_layout_language_get_feature_tags(void *face, unsigned int tableTag, unsigned int scriptIndex, unsigned int languageIndex, unsigned int startOffset, unsigned int *featureCount, unsigned int *featureTags) { (void)face; (void)tableTag; (void)scriptIndex; (void)languageIndex; (void)startOffset; (void)featureTags; if (featureCount) *featureCount = 0; return 0; }
+void hb_ot_layout_lookup_collect_glyphs(void *face, unsigned int tableTag, unsigned int lookupIndex, void *glyphsBefore, void *glyphsInput, void *glyphsAfter, void *glyphsOutput) { (void)face; (void)tableTag; (void)lookupIndex; (void)glyphsBefore; (void)glyphsInput; (void)glyphsAfter; (void)glyphsOutput; }
+unsigned int hb_ot_layout_lookup_get_glyph_alternates(void *face, unsigned int lookupIndex, unsigned int glyph, unsigned int startOffset, unsigned int *alternateCount, unsigned int *alternateGlyphs) { (void)face; (void)lookupIndex; (void)glyph; (void)startOffset; (void)alternateGlyphs; if (alternateCount) *alternateCount = 0; return 0; }
+unsigned int hb_ot_layout_script_get_language_tags(void *face, unsigned int tableTag, unsigned int scriptIndex, unsigned int startOffset, unsigned int *languageCount, unsigned int *languageTags) { (void)face; (void)tableTag; (void)scriptIndex; (void)startOffset; (void)languageTags; if (languageCount) *languageCount = 0; return 0; }
+int hb_ot_layout_script_select_language(void *face, unsigned int tableTag, unsigned int scriptIndex, unsigned int languageCount, const unsigned int *languageTags, unsigned int *languageIndex) { (void)face; (void)tableTag; (void)scriptIndex; (void)languageCount; (void)languageTags; if (languageIndex) *languageIndex = 0; return 0; }
+unsigned int hb_ot_layout_table_get_script_tags(void *face, unsigned int tableTag, unsigned int startOffset, unsigned int *scriptCount, unsigned int *scriptTags) { (void)face; (void)tableTag; (void)startOffset; (void)scriptTags; if (scriptCount) *scriptCount = 0; return 0; }
+int hb_ot_layout_table_select_script(void *face, unsigned int tableTag, unsigned int scriptCount, const unsigned int *scriptTags, unsigned int *scriptIndex, unsigned int *chosenScript) { (void)face; (void)tableTag; (void)scriptCount; (void)scriptTags; if (scriptIndex) *scriptIndex = 0; if (chosenScript) *chosenScript = 0; return 0; }
+void *hb_ot_meta_reference_entry(void *face, unsigned int metaTag) { (void)face; (void)metaTag; return NULL; }
+int hb_ot_metrics_get_position(void *font, unsigned int metricsTag, int *position) { (void)font; (void)metricsTag; if (position) *position = 0; return 0; }
+void hb_ot_metrics_get_position_with_fallback(void *font, unsigned int metricsTag, int *position) { (void)font; (void)metricsTag; if (position) *position = 0; }
+unsigned int hb_ot_name_get_utf8(void *face, unsigned int nameId, void *language, unsigned int *textSize, char *text) { (void)face; (void)nameId; (void)language; if (textSize) *textSize = 0; if (text) *text = '\0'; return 0; }
+const void *hb_ot_name_list_names(void *face, unsigned int *count) { (void)face; if (count) *count = 0; return NULL; }
+void *hb_ot_tag_to_language(unsigned int tag) { (void)tag; return NULL; }
+void hb_ot_tags_from_script_and_language(int script, void *language, unsigned int *scriptCount, unsigned int *scriptTags, unsigned int *languageCount, unsigned int *languageTags) { (void)script; (void)language; if (scriptCount) *scriptCount = 0; if (scriptTags) *scriptTags = 0; if (languageCount) *languageCount = 0; if (languageTags) *languageTags = 0; }
+unsigned int hb_ot_var_get_axis_count(void *face) { (void)face; return 0; }
+unsigned int hb_ot_var_get_axis_infos(void *face, unsigned int startOffset, unsigned int *axisCount, void *axisArray) { (void)face; (void)startOffset; (void)axisArray; if (axisCount) *axisCount = 0; return 0; }
+unsigned int hb_ot_var_get_named_instance_count(void *face) { (void)face; return 0; }
+int hb_ot_var_has_data(void *face) { (void)face; return 0; }
+unsigned int hb_ot_var_named_instance_get_design_coords(void *face, unsigned int instanceIndex, unsigned int *coordCount, float *coords) { (void)face; (void)instanceIndex; (void)coords; if (coordCount) *coordCount = 0; return 0; }
+unsigned int hb_ot_var_named_instance_get_subfamily_name_id(void *face, unsigned int instanceIndex) { (void)face; (void)instanceIndex; return 0; }
+int hb_script_from_string(const char *string, int length) { (void)string; (void)length; return 0; }
+unsigned int hb_script_to_iso15924_tag(int script) { (void)script; return 0; }
+void *hb_set_create(void) { return NULL; }
+void hb_set_destroy(void *set) { (void)set; }
+int hb_set_next(void *set, unsigned int *codepoint) { (void)set; if (codepoint) *codepoint = 0; return 0; }
+int hb_shape_full(void *font, void *buffer, const void *features, unsigned int numFeatures, const char * const *shaperList) { (void)font; (void)buffer; (void)features; (void)numFeatures; (void)shaperList; return 0; }
+float hb_style_get_value(void *font, unsigned int styleTag) { (void)font; (void)styleTag; return 0.0f; }
+unsigned int hb_tag_from_string(const char *string, int length) { (void)string; (void)length; return 0; }
+void hb_tag_to_string(unsigned int tag, char *buf) { (void)tag; if (buf) { buf[0] = '\0'; } }
+void *hb_unicode_funcs_get_default(void) { return NULL; }
+int hb_unicode_general_category(void *funcs, unsigned int unicode) { (void)funcs; (void)unicode; return 0; }
+int hb_unicode_script(void *funcs, unsigned int unicode) { (void)funcs; (void)unicode; return 0; }
+int hb_version_atleast(unsigned int major, unsigned int minor, unsigned int micro) { (void)major; (void)minor; (void)micro; return 0; }
+
+void set_graphemebreaks_utf16(const void *text, size_t length, const char *language, char *breaks) { (void)text; (void)language; if (breaks) { for (size_t i = 0; i < length; ++i) breaks[i] = 0; } }
+void set_linebreaks_utf16(const void *text, size_t length, const char *language, char *breaks) { (void)text; (void)language; if (breaks) { for (size_t i = 0; i < length; ++i) breaks[i] = 0; } }
+void set_wordbreaks_utf16(const void *text, size_t length, const char *language, char *breaks) { (void)text; (void)language; if (breaks) { for (size_t i = 0; i < length; ++i) breaks[i] = 0; } }
+
+int fribidi_get_par_embedding_levels_ex(const void *bidiTypes, const void *bracketTypes, unsigned int len, void *baseDir, void *embeddingLevels) { (void)bidiTypes; (void)bracketTypes; (void)len; (void)baseDir; (void)embeddingLevels; return 0; }
+void fribidi_get_bidi_types(const uint32_t *str, unsigned int len, void *types) { (void)str; (void)len; (void)types; }
+void fribidi_get_bracket_types(const uint32_t *str, unsigned int len, const void *types, void *bracketTypes) { (void)str; (void)len; (void)types; (void)bracketTypes; }
+
+int FcCharSetHasChar(void *charset, unsigned int ucs4) { (void)charset; (void)ucs4; return 0; }
+void FcCharSetDestroy(void *charset) { (void)charset; }
+int FcConfigAppFontAddDir(void *config, const unsigned char *dir) { (void)config; (void)dir; return 0; }
+int FcConfigAppFontAddFile(void *config, const unsigned char *file) { (void)config; (void)file; return 0; }
+int FcConfigBuildFonts(void *config) { (void)config; return 1; }
+void *FcConfigCreate(void) { return NULL; }
+void FcConfigDestroy(void *config) { (void)config; }
+void *FcConfigGetCurrent(void) { return NULL; }
+void *FcConfigGetFontDirs(void *config) { (void)config; return NULL; }
+int FcConfigParseAndLoad(void *config, const unsigned char *file, int complain) { (void)config; (void)file; (void)complain; return 0; }
+int FcConfigSetCurrent(void *config) { (void)config; return 1; }
+int FcConfigSubstitute(void *config, void *pattern, int kind) { (void)config; (void)pattern; (void)kind; return 1; }
+void FcDefaultSubstitute(void *pattern) { (void)pattern; }
+void *FcFontList(void *config, void *pattern, void *objectSet) { (void)config; (void)pattern; (void)objectSet; return NULL; }
+void *FcFontMatch(void *config, void *pattern, int *result) { (void)config; (void)pattern; if (result) *result = 1; return NULL; }
+void *FcFontSort(void *config, void *pattern, int trim, void **charset, int *result) { (void)config; (void)pattern; (void)trim; if (charset) *charset = NULL; if (result) *result = 1; return NULL; }
+void FcFontSetDestroy(void *fontSet) { (void)fontSet; }
+void *FcLangSetGetLangs(void *langSet) { (void)langSet; return NULL; }
+void *FcObjectSetBuild(const char *first, ...) { (void)first; return NULL; }
+int FcPatternAddDouble(void *pattern, const char *object, double value) { (void)pattern; (void)object; (void)value; return 1; }
+int FcPatternAddInteger(void *pattern, const char *object, int value) { (void)pattern; (void)object; (void)value; return 1; }
+int FcPatternAddString(void *pattern, const char *object, const unsigned char *value) { (void)pattern; (void)object; (void)value; return 1; }
+int FcPatternAddWeak(void *pattern, const char *object, int weak) { (void)pattern; (void)object; (void)weak; return 1; }
+void *FcPatternCreate(void) { return NULL; }
+void FcPatternDestroy(void *pattern) { (void)pattern; }
+int FcPatternGetBool(void *pattern, const char *object, int n, int *value) { (void)pattern; (void)object; (void)n; if (value) *value = 0; return 1; }
+int FcPatternGetCharSet(void *pattern, const char *object, int n, void **value) { (void)pattern; (void)object; (void)n; if (value) *value = NULL; return 1; }
+int FcPatternGetDouble(void *pattern, const char *object, int n, double *value) { (void)pattern; (void)object; (void)n; if (value) *value = 0.0; return 1; }
+int FcPatternGetInteger(void *pattern, const char *object, int n, int *value) { (void)pattern; (void)object; (void)n; if (value) *value = 0; return 1; }
+int FcPatternGetLangSet(void *pattern, const char *object, int n, void **value) { (void)pattern; (void)object; (void)n; if (value) *value = NULL; return 1; }
+int FcPatternGetString(void *pattern, const char *object, int n, unsigned char **value) { (void)pattern; (void)object; (void)n; if (value) *value = NULL; return 1; }
+unsigned int FcPatternHash(const void *pattern) { (void)pattern; return seed_count_zero; }
+void *FcStrListCreate(const unsigned char **strings) { (void)strings; return NULL; }
+void FcStrListDone(void *list) { (void)list; }
+unsigned char *FcStrListFirst(void *list) { (void)list; return NULL; }
+unsigned char *FcStrListNext(void *list) { (void)list; return NULL; }
+int FcWeightFromOpenType(int otWeight) { return otWeight; }
+int FcWeightToOpenType(int fcWeight) { return fcWeight; }
+
+seed_void seed_text_dep_stubs_anchor(void) {}
+]=])
+add_library(seed_text_dep_stubs STATIC "${_seed_text_dep_stubs_source}")
+set_property(TARGET seed_text_dep_stubs PROPERTY C_STANDARD 99)
+
 add_library(xsimd INTERFACE)
 target_include_directories(xsimd INTERFACE "${_external_include_dir}")
 
@@ -2978,3 +3138,5 @@ target_compile_definitions(kritaflake PRIVATE
 target_compile_options(kritaflake PRIVATE
     -fno-operator-names
     -include QIcon)
+target_link_libraries(kritaflake PRIVATE
+    seed_text_dep_stubs)
