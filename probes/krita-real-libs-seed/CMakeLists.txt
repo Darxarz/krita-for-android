@@ -3628,7 +3628,8 @@ target_include_directories(kritawidgets
 target_compile_definitions(kritawidgets PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritawidgets PRIVATE
-    -fno-operator-names)
+    -fno-operator-names
+    -include QSet)
 
 disable_seed_tests(libs/psdutils)
 
