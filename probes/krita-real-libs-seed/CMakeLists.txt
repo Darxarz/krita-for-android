@@ -2590,6 +2590,72 @@ file(WRITE "${_external_include_dir}/KPluginFactory" [=[
 #include "kpluginfactory.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/krandom.h" [=[
+#pragma once
+
+#include <QRandomGenerator>
+#include <QString>
+
+class KRandom
+{
+public:
+    static int random()
+    {
+        return static_cast<int>(QRandomGenerator::global()->generate() & 0x7fffffffU);
+    }
+
+    static int random(int max)
+    {
+        return max > 0 ? QRandomGenerator::global()->bounded(max) : 0;
+    }
+
+    static QString randomString(int length)
+    {
+        static const char alphabet[] =
+            "abcdefghijklmnopqrstuvwxyz"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "0123456789";
+
+        QString value;
+        if (length > 0) {
+            value.reserve(length);
+        }
+
+        for (int i = 0; i < length; ++i) {
+            value.append(QLatin1Char(alphabet[QRandomGenerator::global()->bounded(int(sizeof(alphabet) - 1))]));
+        }
+
+        return value;
+    }
+};
+
+class KRandomSequence
+{
+public:
+    explicit KRandomSequence(long seed = 0)
+        : m_generator(static_cast<quint32>(seed))
+    {
+    }
+
+    quint32 getLong(quint32 max)
+    {
+        return max > 0 ? m_generator.bounded(max) : 0;
+    }
+
+    double getDouble()
+    {
+        return m_generator.generateDouble();
+    }
+
+private:
+    QRandomGenerator m_generator;
+};
+]=])
+file(WRITE "${_external_include_dir}/KRandom" [=[
+#pragma once
+#include "krandom.h"
+]=])
+
 file(WRITE "${_external_include_dir}/quazipnewinfo.h" [=[
 #pragma once
 
