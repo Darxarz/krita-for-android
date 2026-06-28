@@ -1378,6 +1378,34 @@ public:
 };
 ]=])
 
+file(WRITE "${_external_include_dir}/kuser.h" [=[
+#pragma once
+
+#include <QString>
+
+class KUser
+{
+public:
+    KUser()
+    {
+    }
+
+    QString loginName() const
+    {
+        return QString();
+    }
+
+    QString fullName() const
+    {
+        return QString();
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KUser" [=[
+#pragma once
+#include "kuser.h"
+]=])
+
 file(WRITE "${_external_include_dir}/kwindowconfig.h" [=[
 #pragma once
 
@@ -2019,6 +2047,7 @@ file(WRITE "${_external_include_dir}/kselectaction.h" [=[
 #include <QIcon>
 #include <QMenu>
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 #include <QWidgetAction>
 
@@ -2052,6 +2081,61 @@ public:
 
     void setToolBarMode(ToolBarMode)
     {
+    }
+
+    void setEditable(bool editable)
+    {
+        m_editable = editable;
+    }
+
+    bool isEditable() const
+    {
+        return m_editable;
+    }
+
+    void setMaxComboViewCount(int count)
+    {
+        m_maxComboViewCount = count;
+    }
+
+    int maxComboViewCount() const
+    {
+        return m_maxComboViewCount;
+    }
+
+    void setItems(const QStringList &items)
+    {
+        clear();
+        m_items = items;
+        for (const QString &item : m_items) {
+            QAction *action = new QAction(item, this);
+            action->setCheckable(true);
+            addAction(action);
+        }
+    }
+
+    QStringList items() const
+    {
+        return m_items;
+    }
+
+    void setCurrentItem(int index)
+    {
+        m_currentItem = index;
+        const auto actionList = m_selectableActionGroup->actions();
+        if (index >= 0 && index < actionList.size()) {
+            actionList.at(index)->setChecked(true);
+        }
+    }
+
+    int currentItem() const
+    {
+        return m_currentItem;
+    }
+
+    QAction *currentAction() const
+    {
+        return m_selectableActionGroup->checkedAction();
     }
 
     void addAction(QAction *action)
@@ -2099,6 +2183,10 @@ private:
     }
 
     QActionGroup *m_selectableActionGroup = nullptr;
+    QStringList m_items;
+    bool m_editable = false;
+    int m_maxComboViewCount = 0;
+    int m_currentItem = -1;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KSelectAction" [=[
