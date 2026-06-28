@@ -3659,7 +3659,7 @@ target_compile_definitions(kritawidgets PRIVATE
 target_compile_options(kritawidgets PRIVATE
     -fno-operator-names
     -include QSet
-    -include klocalizedstring.h)
+    -include "${_external_include_dir}/klocalizedstring.h")
 
 disable_seed_tests(libs/psdutils)
 
