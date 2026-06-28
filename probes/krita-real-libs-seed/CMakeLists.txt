@@ -399,20 +399,21 @@ else()
     message(FATAL_ERROR "Missing fontconfig headers from libfontconfig1-dev")
 endif()
 
-foreach(_seed_unibreak_header IN ITEMS
-        eastasianwidthdef.h
+file(GLOB _seed_unibreak_headers
+    "/usr/include/*break*.h"
+    "/usr/include/unibreak*.h")
+foreach(_seed_unibreak_header IN LISTS _seed_unibreak_headers)
+    get_filename_component(_seed_unibreak_header_name "${_seed_unibreak_header}" NAME)
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "${_seed_unibreak_header}"
+        "${_external_include_dir}/${_seed_unibreak_header_name}")
+endforeach()
+foreach(_seed_required_unibreak_header IN ITEMS
         graphemebreak.h
         linebreak.h
-        linebreakdef.h
-        unibreakbase.h
-        unibreakdef.h
         wordbreak.h)
-    if(EXISTS "/usr/include/${_seed_unibreak_header}")
-        execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "/usr/include/${_seed_unibreak_header}"
-            "${_external_include_dir}/${_seed_unibreak_header}")
-    else()
-        message(FATAL_ERROR "Missing ${_seed_unibreak_header} from libunibreak-dev")
+    if(NOT EXISTS "${_external_include_dir}/${_seed_required_unibreak_header}")
+        message(FATAL_ERROR "Missing ${_seed_required_unibreak_header} from libunibreak-dev")
     endif()
 endforeach()
 
