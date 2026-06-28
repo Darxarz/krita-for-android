@@ -2676,6 +2676,7 @@ int FT_Get_Color_Glyph_Layer(void *face, unsigned int baseGlyph, unsigned int *a
 unsigned long FT_Get_First_Char(void *face, unsigned int *agindex) { (void)face; if (agindex) *agindex = 0; return 0; }
 int FT_Get_MM_Var(void *face, void **amaster) { (void)face; if (amaster) *amaster = NULL; return 1; }
 unsigned long FT_Get_Next_Char(void *face, unsigned long charcode, unsigned int *agindex) { (void)face; (void)charcode; if (agindex) *agindex = 0; return 0; }
+const char *FT_Get_Postscript_Name(void *face) { (void)face; return ""; }
 void *FT_Get_Sfnt_Table(void *face, unsigned int tag) { (void)face; (void)tag; return NULL; }
 void FT_Get_Transform(void *face, void *matrix, void *delta) { (void)face; (void)matrix; (void)delta; }
 int FT_GlyphSlot_Own_Bitmap(void *slot) { (void)slot; return 0; }
@@ -3196,3 +3197,5 @@ target_compile_definitions(kritapsdutils PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritapsdutils PRIVATE
     -fno-operator-names)
+target_link_libraries(kritapsdutils PRIVATE
+    seed_text_dep_stubs)
