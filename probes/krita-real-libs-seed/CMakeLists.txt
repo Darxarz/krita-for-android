@@ -2030,21 +2030,24 @@ public:
     };
 
     explicit KSelectAction(QObject *parent = nullptr)
-        : QAction(parent)
+        : QWidgetAction(parent)
         , m_selectableActionGroup(new QActionGroup(this))
     {
     }
 
     explicit KSelectAction(const QString &text, QObject *parent = nullptr)
-        : QAction(text, parent)
+        : QWidgetAction(parent)
         , m_selectableActionGroup(new QActionGroup(this))
     {
+        setText(text);
     }
 
     KSelectAction(const QIcon &icon, const QString &text, QObject *parent = nullptr)
-        : QAction(icon, text, parent)
+        : QWidgetAction(parent)
         , m_selectableActionGroup(new QActionGroup(this))
     {
+        setIcon(icon);
+        setText(text);
     }
 
     void setToolBarMode(ToolBarMode)
