@@ -2197,8 +2197,10 @@ public:
         m_value = value;
     }
 
-    template <typename Member>
-    auto operator[](Member T::*member) const -> cursor<std::decay_t<Member>>
+    template <typename Member,
+              typename Object = T,
+              typename = std::enable_if_t<std::is_class<Object>::value || std::is_union<Object>::value>>
+    auto operator[](Member Object::*member) const -> cursor<std::decay_t<Member>>
     {
         return cursor<std::decay_t<Member>>(m_value.*member);
     }
