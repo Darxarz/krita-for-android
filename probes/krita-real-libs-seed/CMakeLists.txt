@@ -2019,8 +2019,10 @@ file(WRITE "${_external_include_dir}/kselectaction.h" [=[
 #include <QIcon>
 #include <QMenu>
 #include <QString>
+#include <QWidget>
+#include <QWidgetAction>
 
-class KSelectAction : public QAction
+class KSelectAction : public QWidgetAction
 {
 public:
     enum ToolBarMode {
@@ -2081,6 +2083,11 @@ public:
     }
 
 private:
+    QWidget *createWidget(QWidget *) override
+    {
+        return nullptr;
+    }
+
     void ensureMenu()
     {
         if (!menu()) {
