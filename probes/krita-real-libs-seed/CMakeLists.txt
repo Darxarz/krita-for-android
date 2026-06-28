@@ -3549,11 +3549,13 @@ set(CRASH_ON_SAFE_ASSERTS OFF)
 set(HAVE_DBUS OFF)
 set(GSL_FOUND OFF)
 set(HAVE_GSL 0)
+set(USE_LOCK_FREE_HASH_TABLE OFF)
 set(ANDROID_ENABLE_STDIO_FORWARDING OFF)
 set(QT_QTCORE_LIBRARY Qt5::Core)
 set(QUAZIP_INCLUDE_DIRS "${_external_include_dir}")
 set(QUAZIP_LIBRARIES "")
 configure_file("${KRITA_SOURCE_DIR}/KoConfig.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/KoConfig.h")
+configure_file("${KRITA_SOURCE_DIR}/config-hash-table-implementation.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-hash-table-implementation.h")
 configure_file("${KRITA_SOURCE_DIR}/config-gsl.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-gsl.h")
 configure_file("${KRITA_SOURCE_DIR}/config-safe-asserts.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-safe-asserts.h")
 configure_file("${KRITA_SOURCE_DIR}/config-android-stdio-forwarding.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-android-stdio-forwarding.h")
@@ -3860,3 +3862,32 @@ target_compile_options(kritapsdutils PRIVATE
     -fno-operator-names)
 target_link_libraries(kritapsdutils PRIVATE
     seed_text_dep_stubs)
+
+disable_seed_tests(libs/image)
+disable_seed_tests(libs/image/tiles3)
+
+set(_kritaimage_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaimage")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/image" "${_kritaimage_build_dir}")
+
+target_include_directories(kritaimage
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/brushengine>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/commands>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/commands_new>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/filter>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/floodfill>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/generator>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/layerstyles>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/processing>"
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/image/tiles3>"
+        "$<BUILD_INTERFACE:${_kritaimage_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaimage PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritaimage PRIVATE
+    -fno-operator-names
+    -include QIcon)

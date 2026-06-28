@@ -113,6 +113,7 @@ jobs:
           fi
           git -C upstream/krita sparse-checkout set --skip-checks \
             CMakeLists.txt \
+            config-hash-table-implementation.h.cmake \
             KoConfig.h.cmake \
             3rdparty_vendor/raqm \
             cmake/modules \
@@ -123,6 +124,7 @@ jobs:
             libs/command \
             libs/flake \
             libs/global \
+            libs/image \
             libs/koplugin \
             libs/metadata \
             libs/multiarch \
@@ -184,6 +186,7 @@ jobs:
             kritaresourcewidgets \
             kritawidgets \
             kritapsdutils \
+            kritaimage \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -201,6 +204,7 @@ jobs:
           resourcewidgets_library="$(find "$build_dir" -name 'libkritaresourcewidgets.so' -print -quit)"
           widgets_library="$(find "$build_dir" -name 'libkritawidgets.so' -print -quit)"
           psdutils_library="$(find "$build_dir" -name 'libkritapsdutils.so' -print -quit)"
+          image_library="$(find "$build_dir" -name 'libkritaimage.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -216,6 +220,7 @@ jobs:
           test -n "$resourcewidgets_library"
           test -n "$widgets_library"
           test -n "$psdutils_library"
+          test -n "$image_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -231,6 +236,7 @@ jobs:
           file "$resourcewidgets_library"
           file "$widgets_library"
           file "$psdutils_library"
+          file "$image_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -425,6 +431,20 @@ jobs:
 
           "$readelf" -Ws "$psdutils_library" | tee "$RUNNER_TEMP/kritapsdutils-symbols.txt"
           grep -q "KisAslReader" "$RUNNER_TEMP/kritapsdutils-symbols.txt"
+
+          "$readelf" -h "$image_library" | tee "$RUNNER_TEMP/kritaimage-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaimage-elf-header.txt"
+
+          "$readelf" -d "$image_library" | tee "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libkritawidgets.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libkritapsdutils.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libkritapigment.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libkritamultiarch.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaimage-dynamic.txt"
+
+          "$readelf" -Ws "$image_library" | tee "$RUNNER_TEMP/kritaimage-symbols.txt"
+          grep -q "KisImage" "$RUNNER_TEMP/kritaimage-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4
