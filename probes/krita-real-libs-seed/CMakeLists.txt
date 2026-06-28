@@ -3990,3 +3990,19 @@ target_compile_definitions(kritalibbrush PRIVATE
 target_compile_options(kritalibbrush PRIVATE
     -fno-operator-names
     -include QIcon)
+
+set(_kritaimpex_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaimpex")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/impex" "${_kritaimpex_build_dir}")
+
+target_include_directories(kritaimpex
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/impex>"
+        "$<BUILD_INTERFACE:${_kritaimpex_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaimpex PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritaimpex PRIVATE
+    -fno-operator-names)

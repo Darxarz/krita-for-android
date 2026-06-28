@@ -127,6 +127,7 @@ jobs:
             libs/flake \
             libs/global \
             libs/image \
+            libs/impex \
             libs/koplugin \
             libs/metadata \
             libs/multiarch \
@@ -190,6 +191,7 @@ jobs:
             kritapsdutils \
             kritaimage \
             kritalibbrush \
+            kritaimpex \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -209,6 +211,7 @@ jobs:
           psdutils_library="$(find "$build_dir" -name 'libkritapsdutils.so' -print -quit)"
           image_library="$(find "$build_dir" -name 'libkritaimage.so' -print -quit)"
           brush_library="$(find "$build_dir" -name 'libkritalibbrush.so' -print -quit)"
+          impex_library="$(find "$build_dir" -name 'libkritaimpex.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -226,6 +229,7 @@ jobs:
           test -n "$psdutils_library"
           test -n "$image_library"
           test -n "$brush_library"
+          test -n "$impex_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -243,6 +247,7 @@ jobs:
           file "$psdutils_library"
           file "$image_library"
           file "$brush_library"
+          file "$impex_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -465,6 +470,16 @@ jobs:
 
           "$readelf" -Ws "$brush_library" | tee "$RUNNER_TEMP/kritalibbrush-symbols.txt"
           grep -q "KisBrushRegistry" "$RUNNER_TEMP/kritalibbrush-symbols.txt"
+
+          "$readelf" -h "$impex_library" | tee "$RUNNER_TEMP/kritaimpex-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaimpex-elf-header.txt"
+
+          "$readelf" -d "$impex_library" | tee "$RUNNER_TEMP/kritaimpex-dynamic.txt"
+          grep -q "Shared library: \\[libkritaimage.so\\]" "$RUNNER_TEMP/kritaimpex-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaimpex-dynamic.txt"
+
+          "$readelf" -Ws "$impex_library" | tee "$RUNNER_TEMP/kritaimpex-symbols.txt"
+          grep -q "KisExportCheckRegistry" "$RUNNER_TEMP/kritaimpex-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4
