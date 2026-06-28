@@ -1242,6 +1242,21 @@ public:
         update();
     }
 
+    Qt::ArrowType arrowDirection() const
+    {
+        if (m_arrowDirection != Qt::NoArrow) {
+            return m_arrowDirection;
+        }
+
+        return m_orientation == Qt::Horizontal ? Qt::DownArrow : Qt::RightArrow;
+    }
+
+    void setArrowDirection(Qt::ArrowType direction)
+    {
+        m_arrowDirection = direction;
+        update();
+    }
+
 protected:
     virtual void drawContents(QPainter *)
     {
@@ -1260,6 +1275,7 @@ protected:
 
 private:
     Qt::Orientation m_orientation = Qt::Horizontal;
+    Qt::ArrowType m_arrowDirection = Qt::NoArrow;
     int m_minimum = 0;
     int m_maximum = 100;
     int m_value = 0;
