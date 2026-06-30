@@ -5500,6 +5500,8 @@ add_library(Raqm::Raqm ALIAS libraqm)
 set(_kritaflake_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaflake")
 add_subdirectory("${KRITA_SOURCE_DIR}/libs/flake" "${_kritaflake_build_dir}")
 
+target_sources(kritaflake PRIVATE
+    "${KRITA_SOURCE_DIR}/libs/flake/resources/KisSeExprScript.cpp")
 target_include_directories(kritaflake
     PUBLIC
         "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/flake>"
@@ -5520,6 +5522,8 @@ target_compile_options(kritaflake PRIVATE
     -fno-operator-names
     -include QIcon)
 target_link_libraries(kritaflake PRIVATE
+    kritastore
+    kritaresources
     seed_text_dep_stubs)
 
 set(_kritaresourcewidgets_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaresourcewidgets")
