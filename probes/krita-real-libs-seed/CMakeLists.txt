@@ -1982,6 +1982,11 @@ public:
         return {};
     }
 
+    QStringList keyList() const
+    {
+        return {};
+    }
+
     void deleteEntry(const QString &)
     {
     }
