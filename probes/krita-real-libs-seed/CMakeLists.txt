@@ -3404,11 +3404,39 @@ public:
         return m_selectableActionGroup->checkedAction();
     }
 
+    void setCurrentAction(QAction *action)
+    {
+        if (action) {
+            action->setChecked(true);
+            m_currentItem = m_selectableActionGroup->actions().indexOf(action);
+        }
+    }
+
+    void setCurrentAction(const QString &text)
+    {
+        const auto actionList = m_selectableActionGroup->actions();
+        for (QAction *action : actionList) {
+            if (action->text() == text) {
+                setCurrentAction(action);
+                return;
+            }
+        }
+    }
+
     void addAction(QAction *action)
     {
         ensureMenu();
         menu()->addAction(action);
         m_selectableActionGroup->addAction(action);
+    }
+
+    QAction *addAction(const QString &text)
+    {
+        QAction *action = new QAction(text, this);
+        action->setCheckable(true);
+        addAction(action);
+        m_items.append(text);
+        return action;
     }
 
     virtual QAction *removeAction(QAction *action)
