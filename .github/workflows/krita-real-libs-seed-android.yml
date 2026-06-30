@@ -88,17 +88,21 @@ jobs:
 
           test -d "$prefix/include/QtCore"
           test -d "$prefix/include/QtGui"
+          test -d "$prefix/include/QtNetwork"
           test -d "$prefix/include/QtWidgets"
           test -d "$prefix/include/QtXml"
           test -d "$prefix/include/QtSvg"
+          test -d "$prefix/include/QtConcurrent"
           test -d "$prefix/include/QtSql"
           test -d "$prefix/include/QtPrintSupport"
           test -d "$prefix/include/QtAndroidExtras"
           test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Gui_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Network_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Widgets_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Xml_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Svg_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Concurrent_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5Sql_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5PrintSupport_${{ matrix.abi }}.so"
           test -f "$prefix/lib/libQt5AndroidExtras_${{ matrix.abi }}.so"
@@ -136,6 +140,7 @@ jobs:
             libs/resources \
             libs/resourcewidgets \
             libs/store \
+            libs/ui \
             libs/version \
             libs/widgets \
             libs/widgetutils \
@@ -192,6 +197,7 @@ jobs:
             kritaimage \
             kritalibbrush \
             kritaimpex \
+            kritaui \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -212,6 +218,7 @@ jobs:
           image_library="$(find "$build_dir" -name 'libkritaimage.so' -print -quit)"
           brush_library="$(find "$build_dir" -name 'libkritalibbrush.so' -print -quit)"
           impex_library="$(find "$build_dir" -name 'libkritaimpex.so' -print -quit)"
+          ui_library="$(find "$build_dir" -name 'libkritaui.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -230,6 +237,7 @@ jobs:
           test -n "$image_library"
           test -n "$brush_library"
           test -n "$impex_library"
+          test -n "$ui_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -248,6 +256,7 @@ jobs:
           file "$image_library"
           file "$brush_library"
           file "$impex_library"
+          file "$ui_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -480,6 +489,24 @@ jobs:
 
           "$readelf" -Ws "$impex_library" | tee "$RUNNER_TEMP/kritaimpex-symbols.txt"
           grep -q "KisExportCheckRegistry" "$RUNNER_TEMP/kritaimpex-symbols.txt"
+
+          "$readelf" -h "$ui_library" | tee "$RUNNER_TEMP/kritaui-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaui-elf-header.txt"
+
+          "$readelf" -d "$ui_library" | tee "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libkritaimpex.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libkritaimage.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libkritalibbrush.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libkritawidgets.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Network_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Concurrent_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+          grep -q "Shared library: \\[libQt5AndroidExtras_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritaui-dynamic.txt"
+
+          "$readelf" -Ws "$ui_library" | tee "$RUNNER_TEMP/kritaui-symbols.txt"
+          grep -q "KisPart" "$RUNNER_TEMP/kritaui-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

@@ -602,17 +602,21 @@ endfunction()
 
 add_android_qt5_module(Core)
 add_android_qt5_module(Gui)
+add_android_qt5_module(Network)
 add_android_qt5_module(Widgets)
 add_android_qt5_module(Xml)
 add_android_qt5_module(Svg)
+add_android_qt5_module(Concurrent)
 add_android_qt5_module(Sql)
 add_android_qt5_module(PrintSupport)
 add_android_qt5_module(AndroidExtras)
 
 target_link_libraries(Qt5::Gui INTERFACE Qt5::Core)
+target_link_libraries(Qt5::Network INTERFACE Qt5::Core)
 target_link_libraries(Qt5::Widgets INTERFACE Qt5::Gui)
 target_link_libraries(Qt5::Xml INTERFACE Qt5::Core)
 target_link_libraries(Qt5::Svg INTERFACE Qt5::Widgets)
+target_link_libraries(Qt5::Concurrent INTERFACE Qt5::Core)
 target_link_libraries(Qt5::Sql INTERFACE Qt5::Core)
 target_link_libraries(Qt5::PrintSupport INTERFACE Qt5::Widgets)
 target_link_libraries(Qt5::AndroidExtras INTERFACE Qt5::Core)
@@ -4006,3 +4010,22 @@ target_compile_definitions(kritaimpex PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritaimpex PRIVATE
     -fno-operator-names)
+
+disable_seed_tests(libs/ui)
+
+set(_kritaui_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritaui")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/ui" "${_kritaui_build_dir}")
+
+target_include_directories(kritaui
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/ui>"
+        "$<BUILD_INTERFACE:${_kritaui_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritaui PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritaui PRIVATE
+    -fno-operator-names
+    -include QIcon)
