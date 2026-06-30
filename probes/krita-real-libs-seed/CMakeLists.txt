@@ -2998,6 +2998,26 @@ public:
         ensureMenu(text);
     }
 
+    void addAction(QAction *action)
+    {
+        menu()->addAction(action);
+    }
+
+    QAction *addAction(const QString &text)
+    {
+        return menu()->addAction(text);
+    }
+
+    QAction *addAction(const QIcon &icon, const QString &text)
+    {
+        return menu()->addAction(icon, text);
+    }
+
+    QAction *addSeparator()
+    {
+        return menu()->addSeparator();
+    }
+
 private:
     void ensureMenu(const QString &title)
     {
