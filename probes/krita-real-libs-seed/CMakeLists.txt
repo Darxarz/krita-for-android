@@ -1605,6 +1605,11 @@ public:
         return false;
     }
 
+    template <typename Locale>
+    void setLocale(const Locale &)
+    {
+    }
+
 private:
     QString m_name;
 };
@@ -2705,6 +2710,7 @@ file(WRITE "${_external_include_dir}/ktoggleaction.h" [=[
 #include <QAction>
 #include <QIcon>
 #include <QString>
+#include "kguiitem.h"
 
 class KToggleAction : public QAction
 {
@@ -2727,6 +2733,11 @@ public:
         initialize();
     }
 
+    void setCheckedState(const KGuiItem &item)
+    {
+        m_checkedState = item;
+    }
+
 protected:
     virtual void slotToggled(bool)
     {
@@ -2738,6 +2749,8 @@ private:
         setCheckable(true);
         QObject::connect(this, &QAction::toggled, this, &KToggleAction::slotToggled);
     }
+
+    KGuiItem m_checkedState;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KToggleAction" [=[
@@ -3451,6 +3464,7 @@ file(WRITE "${_external_include_dir}/kdesktopfile.h" [=[
 #pragma once
 
 #include <QString>
+#include "kconfiggroup.h"
 
 class KDesktopFile
 {
@@ -3462,6 +3476,21 @@ public:
     QString readDocPath() const
     {
         return QString();
+    }
+
+    template <typename Locale>
+    void setLocale(const Locale &)
+    {
+    }
+
+    KConfigGroup desktopGroup() const
+    {
+        return KConfigGroup();
+    }
+
+    static bool isDesktopFile(const QString &path)
+    {
+        return path.endsWith(".desktop");
     }
 };
 ]=])
