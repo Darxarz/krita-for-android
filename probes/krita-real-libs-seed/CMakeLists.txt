@@ -1229,6 +1229,7 @@ file(WRITE "${_external_include_dir}/seed_kritaui_forced_includes.h" [=[
 #include <QIcon>
 #include <QItemSelection>
 #include <QLabel>
+#include <QDialogButtonBox>
 #include <QToolButton>
 #include "klocalizedstring.h"
 ]=])
@@ -2139,8 +2140,10 @@ file(WRITE "${_external_include_dir}/kpagedialog.h" [=[
 #pragma once
 
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QIcon>
 #include <QObject>
+#include <QPushButton>
 #include <QString>
 #include <QWidget>
 
@@ -2199,6 +2202,7 @@ public:
 
     explicit KPageDialog(QWidget *parent = nullptr)
         : QDialog(parent)
+        , m_buttonBox(new QDialogButtonBox(this))
     {
     }
 
@@ -2231,8 +2235,24 @@ public:
         }
     }
 
+    void setStandardButtons(QDialogButtonBox::StandardButtons buttons)
+    {
+        m_buttonBox->setStandardButtons(buttons);
+    }
+
+    QPushButton *button(QDialogButtonBox::StandardButton which) const
+    {
+        return m_buttonBox->button(which);
+    }
+
+    QDialogButtonBox *buttonBox() const
+    {
+        return m_buttonBox;
+    }
+
 private:
     KPageWidgetItem *m_currentPage = nullptr;
+    QDialogButtonBox *m_buttonBox = nullptr;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KPageDialog" [=[
@@ -3607,6 +3627,26 @@ public:
         return m_value;
     }
 
+    T &operator*()
+    {
+        return m_value;
+    }
+
+    const T &operator*() const
+    {
+        return m_value;
+    }
+
+    T *operator->()
+    {
+        return &m_value;
+    }
+
+    const T *operator->() const
+    {
+        return &m_value;
+    }
+
     void set(const T &value)
     {
         m_value = value;
@@ -3686,6 +3726,26 @@ public:
     T get() const
     {
         return m_value;
+    }
+
+    T &operator*()
+    {
+        return m_value;
+    }
+
+    const T &operator*() const
+    {
+        return m_value;
+    }
+
+    T *operator->()
+    {
+        return &m_value;
+    }
+
+    const T *operator->() const
+    {
+        return &m_value;
     }
 
     void set(const T &value)
