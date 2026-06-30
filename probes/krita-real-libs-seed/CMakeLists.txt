@@ -1610,6 +1610,14 @@ public:
     {
     }
 
+    void markAsClean()
+    {
+    }
+
+    void reparseConfiguration()
+    {
+    }
+
 private:
     QString m_name;
 };
