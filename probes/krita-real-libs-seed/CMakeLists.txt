@@ -3155,6 +3155,10 @@ public:
     {
     }
 
+    static void setNoAccel(QWidget *)
+    {
+    }
+
     static void last_manage(QWidget *, QWidget *, const QString &)
     {
     }
@@ -3699,6 +3703,12 @@ public:
         m_value = value;
     }
 
+    template <typename Func>
+    void bind(Func &&func) const
+    {
+        func(m_value);
+    }
+
     template <typename Member,
               typename Object = T,
               typename = std::enable_if_t<std::is_class<Object>::value || std::is_union<Object>::value>>
@@ -3948,15 +3958,40 @@ public:
 
     reader() = default;
 
-    template <typename Source>
-    explicit reader(const Source &source)
+    explicit reader(const T &value)
+        : m_value(value)
     {
-        (void)source;
+    }
+
+    template <typename Source,
+              typename = decltype(std::declval<const Source &>().get())>
+    reader(const Source &source)
+        : m_value(source.get())
+    {
     }
 
     T get() const
     {
-        return T {};
+        return m_value;
+    }
+
+    void set(const T &value)
+    {
+        m_value = value;
+    }
+
+    template <typename Source,
+              typename = decltype(std::declval<const Source &>().get())>
+    reader &operator=(const Source &source)
+    {
+        m_value = source.get();
+        return *this;
+    }
+
+    template <typename Func>
+    void bind(Func &&func) const
+    {
+        func(m_value);
     }
 
 private:
