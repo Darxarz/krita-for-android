@@ -2919,14 +2919,14 @@ public:
     }
 
     template <typename Func>
-    auto map(Func &&func) const -> state<std::decay_t<decltype(func(m_value))>, Tag>
+    auto map(Func &&func) const -> state<std::decay_t<decltype(func(std::declval<const T &>()))>, Tag>
     {
-        using Result = std::decay_t<decltype(func(m_value))>;
+        using Result = std::decay_t<decltype(func(std::declval<const T &>()))>;
         return state<Result, Tag>(func(m_value));
     }
 
     template <typename Func>
-    auto xform(Func &&func) const -> state<std::decay_t<decltype(func(m_value))>, Tag>
+    auto xform(Func &&func) const -> state<std::decay_t<decltype(func(std::declval<const T &>()))>, Tag>
     {
         return map(std::forward<Func>(func));
     }
@@ -3000,14 +3000,14 @@ public:
     }
 
     template <typename Func>
-    auto map(Func &&func) const -> cursor<std::decay_t<decltype(func(m_value))>>
+    auto map(Func &&func) const -> cursor<std::decay_t<decltype(func(std::declval<const T &>()))>>
     {
-        using Result = std::decay_t<decltype(func(m_value))>;
+        using Result = std::decay_t<decltype(func(std::declval<const T &>()))>;
         return cursor<Result>(func(m_value));
     }
 
     template <typename Func>
-    auto xform(Func &&func) const -> cursor<std::decay_t<decltype(func(m_value))>>
+    auto xform(Func &&func) const -> cursor<std::decay_t<decltype(func(std::declval<const T &>()))>>
     {
         return map(std::forward<Func>(func));
     }
@@ -3064,14 +3064,14 @@ public:
     }
 
     template <typename Func>
-    auto map(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(m_value))>>
+    auto map(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(std::declval<const T &>()))>>
     {
-        using Result = std::decay_t<decltype(func(m_value))>;
+        using Result = std::decay_t<decltype(func(std::declval<const T &>()))>;
         return qt_cursor<Result>(cursor<Result>(func(m_value)));
     }
 
     template <typename Func>
-    auto xform(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(m_value))>>
+    auto xform(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(std::declval<const T &>()))>>
     {
         return map(std::forward<Func>(func));
     }
