@@ -1160,6 +1160,62 @@ file(WRITE "${_external_include_dir}/KLocalizedString" [=[
 #include "klocalizedstring.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kformat.h" [=[
+#pragma once
+
+#include <QString>
+
+class KFormat
+{
+public:
+    enum BinarySizeDialect {
+        DefaultBinaryDialect,
+        IECBinaryDialect,
+        JEDECBinaryDialect,
+        MetricBinaryDialect
+    };
+
+    enum BinaryUnitDialect {
+        UnitByte,
+        UnitKiloByte,
+        UnitMegaByte,
+        UnitGigaByte,
+        UnitTeraByte,
+        UnitPetaByte,
+        UnitLastUnit
+    };
+
+    QString formatByteSize(double size,
+                           int precision = 1,
+                           BinarySizeDialect = DefaultBinaryDialect,
+                           BinaryUnitDialect units = UnitByte) const
+    {
+        static const char *suffixes[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB"};
+        double value = size;
+        int unit = static_cast<int>(units);
+        if (unit <= static_cast<int>(UnitByte)) {
+            unit = 0;
+            while (value >= 1024.0 && unit < static_cast<int>(UnitPetaByte)) {
+                value /= 1024.0;
+                ++unit;
+            }
+        } else {
+            while (unit > 0) {
+                value /= 1024.0;
+                --unit;
+            }
+            unit = static_cast<int>(units);
+        }
+
+        return QStringLiteral("%1 %2").arg(value, 0, 'f', precision).arg(QString::fromLatin1(suffixes[unit]));
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KFormat" [=[
+#pragma once
+#include "kformat.h"
+]=])
+
 file(WRITE "${_external_include_dir}/seed_kritawidgets_forced_includes.h" [=[
 #pragma once
 
