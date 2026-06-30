@@ -1313,6 +1313,39 @@ file(WRITE "${_external_include_dir}/KColorButton" [=[
 #include "kcolorbutton.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kcolormimedata.h" [=[
+#pragma once
+
+#include <QColor>
+#include <QDrag>
+#include <QMimeData>
+#include <QVariant>
+#include <QWidget>
+
+class KColorMimeData
+{
+public:
+    static bool canDecode(const QMimeData *mimeData)
+    {
+        return mimeData && mimeData->hasColor();
+    }
+
+    static QColor fromMimeData(const QMimeData *mimeData)
+    {
+        return canDecode(mimeData) ? mimeData->colorData().value<QColor>() : QColor();
+    }
+
+    static QDrag *createDrag(const QColor &color, QWidget *source)
+    {
+        auto *drag = new QDrag(source);
+        auto *mimeData = new QMimeData;
+        mimeData->setColorData(color);
+        drag->setMimeData(mimeData);
+        return drag;
+    }
+};
+]=])
+
 file(WRITE "${_external_include_dir}/png.h" [=[
 #pragma once
 
