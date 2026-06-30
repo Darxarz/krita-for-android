@@ -576,6 +576,52 @@ private:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "wdgpreseticonlibrary")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QGridLayout>
+#include <QLabel>
+#include <QListView>
+#include <QWidget>
+
+#include "kis_slider_spin_box.h"
+
+class Ui_wdgpreseticonlibrary
+{
+public:
+    KisDoubleSliderSpinBox *sldHue = nullptr;
+    KisDoubleSliderSpinBox *sldSat = nullptr;
+    KisDoubleSliderSpinBox *sldLevels = nullptr;
+    QListView *vwBase = nullptr;
+    QListView *vwOptional = nullptr;
+    QLabel *lblIconPreview = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QGridLayout(parent);
+        sldHue = new KisDoubleSliderSpinBox(parent);
+        sldSat = new KisDoubleSliderSpinBox(parent);
+        sldLevels = new KisDoubleSliderSpinBox(parent);
+        vwBase = new QListView(parent);
+        vwOptional = new QListView(parent);
+        lblIconPreview = new QLabel(parent);
+
+        layout->addWidget(sldHue, 0, 0);
+        layout->addWidget(sldSat, 1, 0);
+        layout->addWidget(sldLevels, 2, 0);
+        layout->addWidget(vwBase, 0, 1);
+        layout->addWidget(vwOptional, 1, 1);
+        layout->addWidget(lblIconPreview, 2, 1);
+    }
+};
+
+namespace Ui {
+class wdgpreseticonlibrary : public ::Ui_wdgpreseticonlibrary
+{
+};
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "wdg_file_name_requester")
             file(WRITE "${_generated_header}" [=[
 #pragma once
