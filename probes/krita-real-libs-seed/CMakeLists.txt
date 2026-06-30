@@ -1001,6 +1001,7 @@ file(MAKE_DIRECTORY
     "${_external_include_dir}"
     "${_external_include_dir}/lager"
     "${_external_include_dir}/lager/extra"
+    "${_external_include_dir}/lager/lenses"
     "${_external_include_dir}/gsl"
     "${_external_include_dir}/zug/compat"
     "${_external_include_dir}/zug/reducing"
@@ -3718,7 +3719,7 @@ public:
     }
 
     template <typename Tag>
-    explicit cursor(const state<T, Tag> &state)
+    cursor(const state<T, Tag> &state)
         : m_value(state.get())
     {
     }
@@ -3885,6 +3886,12 @@ cursor<T> make_constant(const T &value)
 file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
 #pragma once
 
+#include <functional>
+#include <type_traits>
+#include <utility>
+
+#include "cursor.hpp"
+
 namespace lager {
 
 template <typename T>
@@ -3910,14 +3917,17 @@ private:
     T m_value {};
 };
 
+template <typename Source>
+using source_value_t = typename std::decay_t<Source>::value_type;
+
 template <typename... Args>
 class with_result
 {
 public:
     template <typename Func>
-    auto map(Func &&func) const
+    auto map(Func &&) const -> reader<std::decay_t<std::invoke_result_t<Func, source_value_t<Args>...>>>
     {
-        return func;
+        return {};
     }
 };
 
@@ -3994,6 +4004,42 @@ composed_lens<Lhs, Rhs> operator|(Lhs lhs, Rhs rhs)
 } // namespace lager
 ]=])
 
+file(WRITE "${_external_include_dir}/lager/lenses/tuple.hpp" [=[
+#pragma once
+
+#include <cstddef>
+#include <tuple>
+#include <utility>
+
+#include "../lenses.hpp"
+
+namespace lager {
+namespace lenses {
+
+template <std::size_t Index>
+struct tuple_lens
+{
+    template <typename Source>
+    decltype(auto) get(Source &&source) const
+    {
+        return std::get<Index>(std::forward<Source>(source));
+    }
+
+    template <typename Source, typename Value>
+    auto set(Source source, Value &&value) const
+    {
+        std::get<Index>(source) = std::forward<Value>(value);
+        return source;
+    }
+};
+
+inline constexpr tuple_lens<0> first {};
+inline constexpr tuple_lens<1> second {};
+
+} // namespace lenses
+} // namespace lager
+]=])
+
 file(WRITE "${_external_include_dir}/zug/compat/invoke.hpp" [=[
 #pragma once
 
@@ -4004,7 +4050,7 @@ namespace zug {
 namespace compat {
 
 template <typename Func, typename... Args>
-decltype(auto) invoke(Func &&func, Args &&...args)
+constexpr decltype(auto) invoke(Func &&func, Args &&...args)
 {
     return std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
 }
@@ -4016,10 +4062,23 @@ decltype(auto) invoke(Func &&func, Args &&...args)
 file(WRITE "${_external_include_dir}/zug/reducing/last.hpp" [=[
 #pragma once
 
+#include <utility>
+
 namespace zug {
 
 struct last_t
 {
+    template <typename Value>
+    constexpr decltype(auto) operator()(Value &&value) const
+    {
+        return std::forward<Value>(value);
+    }
+
+    template <typename State, typename Value>
+    constexpr decltype(auto) operator()(State &&, Value &&value) const
+    {
+        return std::forward<Value>(value);
+    }
 };
 
 inline constexpr last_t last {};
@@ -4029,6 +4088,8 @@ inline constexpr last_t last {};
 
 file(WRITE "${_external_include_dir}/zug/transducer/map.hpp" [=[
 #pragma once
+
+#include <zug/compat/invoke.hpp>
 
 #include <utility>
 
@@ -4043,15 +4104,21 @@ struct map_result
 {
     Func func;
 
-    template <typename Reducer, typename Value>
-    auto operator()(Reducer &&reducer, Value &&value) const
+    template <typename Value>
+    constexpr decltype(auto) operator()(Value &&value) const
     {
-        return reducer(func(std::forward<Value>(value)));
+        return func(std::forward<Value>(value));
+    }
+
+    template <typename Reducer, typename Value>
+    constexpr decltype(auto) operator()(Reducer &&reducer, Value &&value) const
+    {
+        return std::forward<Reducer>(reducer)(func(std::forward<Value>(value)));
     }
 };
 
 template <typename Func>
-map_result<Func> map(Func func)
+constexpr map_result<Func> map(Func func)
 {
     return {func};
 }
