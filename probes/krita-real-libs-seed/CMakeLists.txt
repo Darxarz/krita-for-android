@@ -1338,6 +1338,54 @@ file(WRITE "${_external_include_dir}/KColorButton" [=[
 #include "kcolorbutton.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kwidgetitemdelegate.h" [=[
+#pragma once
+
+#include <QAbstractItemView>
+#include <QList>
+#include <QModelIndex>
+#include <QPersistentModelIndex>
+#include <QStyledItemDelegate>
+#include <QWidget>
+
+class KWidgetItemDelegate : public QStyledItemDelegate
+{
+public:
+    explicit KWidgetItemDelegate(QAbstractItemView *itemView, QObject *parent = nullptr)
+        : QStyledItemDelegate(parent)
+        , m_itemView(itemView)
+    {
+    }
+
+    QAbstractItemView *itemView() const
+    {
+        return m_itemView;
+    }
+
+    virtual QList<QWidget *> createItemWidgets(const QModelIndex &) const
+    {
+        return {};
+    }
+
+    virtual void updateItemWidgets(const QList<QWidget *> &,
+                                  const QStyleOptionViewItem &,
+                                  const QPersistentModelIndex &) const
+    {
+    }
+
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    virtual void updateItemWidgets(const QList<QWidget *>,
+                                  const QStyleOptionViewItem &,
+                                  const QPersistentModelIndex &) const
+    {
+    }
+#endif
+
+private:
+    QAbstractItemView *m_itemView = nullptr;
+};
+]=])
+
 file(WRITE "${_external_include_dir}/kcolormimedata.h" [=[
 #pragma once
 
@@ -1588,6 +1636,14 @@ public:
     static Ptr openConfig(const QString &name = QString())
     {
         return Ptr::create(name);
+    }
+
+    void markAsClean()
+    {
+    }
+
+    void reparseConfiguration()
+    {
     }
 };
 
