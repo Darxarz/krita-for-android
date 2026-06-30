@@ -1194,6 +1194,65 @@ file(WRITE "${_external_include_dir}/KComboBox" [=[
 #include "kcombobox.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/kcolorbutton.h" [=[
+#pragma once
+
+#include <QColor>
+#include <QPushButton>
+
+class KColorButton : public QPushButton
+{
+public:
+    explicit KColorButton(QWidget *parent = nullptr)
+        : QPushButton(parent)
+    {
+    }
+
+    QColor color() const
+    {
+        return m_color;
+    }
+
+    QColor defaultColor() const
+    {
+        return m_defaultColor;
+    }
+
+    void setColor(const QColor &color)
+    {
+        m_color = color;
+    }
+
+    void setDefaultColor(const QColor &color)
+    {
+        m_defaultColor = color;
+    }
+
+    void setAlphaChannelEnabled(bool enabled)
+    {
+        m_alphaChannelEnabled = enabled;
+    }
+
+    bool isAlphaChannelEnabled() const
+    {
+        return m_alphaChannelEnabled;
+    }
+
+    void changed(const QColor &)
+    {
+    }
+
+private:
+    QColor m_color;
+    QColor m_defaultColor;
+    bool m_alphaChannelEnabled = false;
+};
+]=])
+file(WRITE "${_external_include_dir}/KColorButton" [=[
+#pragma once
+#include "kcolorbutton.h"
+]=])
+
 file(WRITE "${_external_include_dir}/png.h" [=[
 #pragma once
 
