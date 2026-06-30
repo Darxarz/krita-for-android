@@ -3810,6 +3810,12 @@ public:
         m_value = value;
     }
 
+    template <typename Func>
+    void bind(Func &&func) const
+    {
+        func(m_value);
+    }
+
     template <typename Member,
               typename Object = T,
               typename = std::enable_if_t<std::is_class<Object>::value || std::is_union<Object>::value>>
