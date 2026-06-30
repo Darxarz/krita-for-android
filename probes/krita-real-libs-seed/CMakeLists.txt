@@ -304,6 +304,278 @@ private:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "wdggeneralsettings")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QFrame>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QSpinBox>
+#include <QString>
+#include <QTabWidget>
+#include <QToolButton>
+#include <QVBoxLayout>
+#include <QWidget>
+
+#include "KisColorSamplerPreviewPreview.h"
+#include "kis_color_button.h"
+#include "kis_file_name_requester.h"
+#include "kis_font_family_combo_box.h"
+#include "kis_int_parse_spin_box.h"
+#include "kis_slider_spin_box.h"
+#include "kis_warning_block.h"
+
+namespace Ui {
+
+class WdgGeneralSettings
+{
+public:
+    QTabWidget *tabWidget = nullptr;
+    QWidget *File = nullptr;
+    QGroupBox *m_autosaveCheckBox = nullptr;
+    KisIntParseSpinBox *m_autosaveSpinBox = nullptr;
+    QCheckBox *chkHideAutosaveFiles = nullptr;
+    QGroupBox *m_backupFileCheckBox = nullptr;
+    QComboBox *cmbBackupFileLocation = nullptr;
+    QLineEdit *txtBackupFileSuffix = nullptr;
+    QSpinBox *intNumBackupFiles = nullptr;
+    QCheckBox *chkZip64 = nullptr;
+    QCheckBox *m_chkCompressKra = nullptr;
+    QCheckBox *m_chkTrimKra = nullptr;
+    QCheckBox *m_chkTrimFramesImport = nullptr;
+    QComboBox *cmbDefaultExportFileType = nullptr;
+    QWidget *Pasting = nullptr;
+    QRadioButton *btnDownload = nullptr;
+    QRadioButton *btnLocal = nullptr;
+    QRadioButton *btnBitmap = nullptr;
+    QRadioButton *btnAsk = nullptr;
+    QWidget *Window = nullptr;
+    QFormLayout *formLayout = nullptr;
+    QComboBox *m_cmbMDIType = nullptr;
+    QCheckBox *m_chkCanvasMessages = nullptr;
+    KisIntParseSpinBox *intZoomMarginSize = nullptr;
+    QGroupBox *group_subWinMode = nullptr;
+    QWidget *widget = nullptr;
+    QLabel *m_backgroundimage = nullptr;
+    QToolButton *m_bnFileName = nullptr;
+    QPushButton *clearBgImageButton = nullptr;
+    QLabel *label_5 = nullptr;
+    KisColorButton *m_mdiColor = nullptr;
+    QCheckBox *m_chkRubberBand = nullptr;
+    QGroupBox *chkUseCustomFont = nullptr;
+    KisFontComboBoxes *cmbCustomFont = nullptr;
+    QSpinBox *intFontSize = nullptr;
+    QGroupBox *m_chkHiDPI = nullptr;
+    QWidget *m_wdgHiDPIFractionalScaling = nullptr;
+    QCheckBox *m_chkHiDPIFractionalScaling = nullptr;
+    QWidget *Cursor = nullptr;
+    QComboBox *m_cmbCursorShape = nullptr;
+    QComboBox *m_cmbOutlineShape = nullptr;
+    QGroupBox *groupBox = nullptr;
+    QCheckBox *m_showOutlinePainting = nullptr;
+    QCheckBox *m_changeBrushOutline = nullptr;
+    KisColorButton *cursorColorButton = nullptr;
+    QGroupBox *m_chkSeparateEraserCursor = nullptr;
+    QComboBox *m_cmbEraserCursorShape = nullptr;
+    QComboBox *m_cmbEraserOutlineShape = nullptr;
+    QCheckBox *m_showEraserOutlinePainting = nullptr;
+    QCheckBox *m_changeEraserBrushOutline = nullptr;
+    KisColorButton *eraserCursorColorButton = nullptr;
+    QComboBox *m_cmbColorSamplerPreviewStyle = nullptr;
+    QFrame *m_frmColorSamplerCircleSettings = nullptr;
+    KisSliderSpinBox *m_nmbColorSamplerPreviewSize = nullptr;
+    KisColorSamplerPreviewPreview *m_lblColorSamplerPreviewSizePreview = nullptr;
+    KisDoubleSliderSpinBox *m_ssbColorSamplerPreviewThickness = nullptr;
+    QCheckBox *m_chkColorSamplerPreviewOutlineEnabled = nullptr;
+    QCheckBox *m_chkColorSamplerPreviewExtraCircles = nullptr;
+    QWidget *Tools = nullptr;
+    QRadioButton *m_radioToolOptionsInDocker = nullptr;
+    QComboBox *cmbFlowMode = nullptr;
+    QComboBox *cmbCmykBlendingMode = nullptr;
+    QCheckBox *m_chkSwitchSelectionCtrlAlt = nullptr;
+    QComboBox *cmbTouchPainting = nullptr;
+    QCheckBox *chkTouchPressureSensitivity = nullptr;
+    QCheckBox *chkEnableTransformToolAfterPaste = nullptr;
+    QSpinBox *spnZoomSteps = nullptr;
+    QCheckBox *chkZoomHorizontally = nullptr;
+    QCheckBox *chkEnableSelectionActionBar = nullptr;
+    QWidget *Animation = nullptr;
+    QCheckBox *m_chkAutoPin = nullptr;
+    QCheckBox *m_chkAdaptivePlaybackRange = nullptr;
+    QCheckBox *m_chkAutoZoom = nullptr;
+    QWidget *Resources = nullptr;
+    KisFileNameRequester *m_urlResourceFolder = nullptr;
+    QComboBox *m_resourceFolderSelector = nullptr;
+    KisWarningBlock *grpWindowsAppData = nullptr;
+    KisWarningBlock *grpNonWritableLocation = nullptr;
+    KisWarningBlock *grpRestartMessage = nullptr;
+    KisWarningBlock *grpAndroidWarningMessage = nullptr;
+    QWidget *Miscellaneous = nullptr;
+    QWidget *scrollAreaWidgetContents = nullptr;
+    QFormLayout *formLayout_13 = nullptr;
+    QComboBox *cmbStartupSession = nullptr;
+    QCheckBox *chkSaveSessionOnQuit = nullptr;
+    QCheckBox *m_chkConvertOnImport = nullptr;
+    QLabel *label = nullptr;
+    KisIntParseSpinBox *m_undoStackSize = nullptr;
+    QCheckBox *chkCumulativeUndo = nullptr;
+    QPushButton *btnAdvancedCumulativeUndo = nullptr;
+    QCheckBox *chkShowRootLayer = nullptr;
+    QCheckBox *chkUsageLogging = nullptr;
+    QCheckBox *m_chkNativeFileDialog = nullptr;
+    QSpinBox *intMaxBrushSize = nullptr;
+    QGroupBox *chkForcedFontDPI = nullptr;
+    QSpinBox *intForcedFontDPI = nullptr;
+    QCheckBox *chkRenameMergedLayers = nullptr;
+    QCheckBox *chkRenamePastedLayers = nullptr;
+    QCheckBox *chkRenameDuplicatedLayers = nullptr;
+    QCheckBox *chkEnableLongPress = nullptr;
+    QGroupBox *m_groupBoxKineticScrollingSettings = nullptr;
+    QComboBox *m_cmbKineticScrollingGesture = nullptr;
+    KisSliderSpinBox *m_kineticScrollingSensitivitySlider = nullptr;
+    QCheckBox *m_chkKineticScrollingHideScrollbars = nullptr;
+    QCheckBox *chkIgnoreHighFunctionKeys = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *rootLayout = new QVBoxLayout(parent);
+        tabWidget = makeWidget<QTabWidget>(parent);
+        rootLayout->addWidget(tabWidget);
+
+        File = makeTab(QStringLiteral("File Handling"));
+        Pasting = makeTab(QStringLiteral("Pasting"));
+        Window = makeTab(QStringLiteral("Window"));
+        Cursor = makeTab(QStringLiteral("Cursor"));
+        Tools = makeTab(QStringLiteral("Tools"));
+        Animation = makeTab(QStringLiteral("Animation"));
+        Resources = makeTab(QStringLiteral("Resources"));
+        Miscellaneous = makeTab(QStringLiteral("Miscellaneous"));
+
+        m_autosaveCheckBox = makeWidget<QGroupBox>(parent);
+        m_autosaveSpinBox = makeWidget<KisIntParseSpinBox>(parent);
+        chkHideAutosaveFiles = makeWidget<QCheckBox>(parent);
+        m_backupFileCheckBox = makeWidget<QGroupBox>(parent);
+        cmbBackupFileLocation = makeWidget<QComboBox>(parent);
+        txtBackupFileSuffix = makeWidget<QLineEdit>(parent);
+        intNumBackupFiles = makeWidget<QSpinBox>(parent);
+        chkZip64 = makeWidget<QCheckBox>(parent);
+        m_chkCompressKra = makeWidget<QCheckBox>(parent);
+        m_chkTrimKra = makeWidget<QCheckBox>(parent);
+        m_chkTrimFramesImport = makeWidget<QCheckBox>(parent);
+        cmbDefaultExportFileType = makeWidget<QComboBox>(parent);
+        btnDownload = makeWidget<QRadioButton>(parent);
+        btnLocal = makeWidget<QRadioButton>(parent);
+        btnBitmap = makeWidget<QRadioButton>(parent);
+        btnAsk = makeWidget<QRadioButton>(parent);
+        formLayout = new QFormLayout();
+        m_cmbMDIType = makeWidget<QComboBox>(parent);
+        m_chkCanvasMessages = makeWidget<QCheckBox>(parent);
+        intZoomMarginSize = makeWidget<KisIntParseSpinBox>(parent);
+        group_subWinMode = makeWidget<QGroupBox>(parent);
+        widget = makeWidget<QWidget>(parent);
+        m_backgroundimage = makeWidget<QLabel>(parent);
+        m_bnFileName = makeWidget<QToolButton>(parent);
+        clearBgImageButton = makeWidget<QPushButton>(parent);
+        label_5 = makeWidget<QLabel>(parent);
+        m_mdiColor = makeWidget<KisColorButton>(parent);
+        m_chkRubberBand = makeWidget<QCheckBox>(parent);
+        chkUseCustomFont = makeWidget<QGroupBox>(parent);
+        cmbCustomFont = makeWidget<KisFontComboBoxes>(parent);
+        auto *stylesComboBox = new QComboBox(cmbCustomFont);
+        stylesComboBox->setObjectName(QStringLiteral("stylesComboBox"));
+        intFontSize = makeWidget<QSpinBox>(parent);
+        m_chkHiDPI = makeWidget<QGroupBox>(parent);
+        m_wdgHiDPIFractionalScaling = makeWidget<QWidget>(parent);
+        m_chkHiDPIFractionalScaling = makeWidget<QCheckBox>(parent);
+        m_cmbCursorShape = makeWidget<QComboBox>(parent);
+        m_cmbOutlineShape = makeWidget<QComboBox>(parent);
+        groupBox = makeWidget<QGroupBox>(parent);
+        m_showOutlinePainting = makeWidget<QCheckBox>(parent);
+        m_changeBrushOutline = makeWidget<QCheckBox>(parent);
+        cursorColorButton = makeWidget<KisColorButton>(parent);
+        m_chkSeparateEraserCursor = makeWidget<QGroupBox>(parent);
+        m_cmbEraserCursorShape = makeWidget<QComboBox>(parent);
+        m_cmbEraserOutlineShape = makeWidget<QComboBox>(parent);
+        m_showEraserOutlinePainting = makeWidget<QCheckBox>(parent);
+        m_changeEraserBrushOutline = makeWidget<QCheckBox>(parent);
+        eraserCursorColorButton = makeWidget<KisColorButton>(parent);
+        m_cmbColorSamplerPreviewStyle = makeWidget<QComboBox>(parent);
+        m_frmColorSamplerCircleSettings = makeWidget<QFrame>(parent);
+        m_nmbColorSamplerPreviewSize = makeWidget<KisSliderSpinBox>(parent);
+        m_lblColorSamplerPreviewSizePreview = makeWidget<KisColorSamplerPreviewPreview>(parent);
+        m_ssbColorSamplerPreviewThickness = makeWidget<KisDoubleSliderSpinBox>(parent);
+        m_chkColorSamplerPreviewOutlineEnabled = makeWidget<QCheckBox>(parent);
+        m_chkColorSamplerPreviewExtraCircles = makeWidget<QCheckBox>(parent);
+        m_radioToolOptionsInDocker = makeWidget<QRadioButton>(parent);
+        cmbFlowMode = makeWidget<QComboBox>(parent);
+        cmbCmykBlendingMode = makeWidget<QComboBox>(parent);
+        m_chkSwitchSelectionCtrlAlt = makeWidget<QCheckBox>(parent);
+        cmbTouchPainting = makeWidget<QComboBox>(parent);
+        chkTouchPressureSensitivity = makeWidget<QCheckBox>(parent);
+        chkEnableTransformToolAfterPaste = makeWidget<QCheckBox>(parent);
+        spnZoomSteps = makeWidget<QSpinBox>(parent);
+        chkZoomHorizontally = makeWidget<QCheckBox>(parent);
+        chkEnableSelectionActionBar = makeWidget<QCheckBox>(parent);
+        m_chkAutoPin = makeWidget<QCheckBox>(parent);
+        m_chkAdaptivePlaybackRange = makeWidget<QCheckBox>(parent);
+        m_chkAutoZoom = makeWidget<QCheckBox>(parent);
+        m_urlResourceFolder = makeWidget<KisFileNameRequester>(parent);
+        m_resourceFolderSelector = makeWidget<QComboBox>(parent);
+        grpWindowsAppData = makeWidget<KisWarningBlock>(parent);
+        grpNonWritableLocation = makeWidget<KisWarningBlock>(parent);
+        grpRestartMessage = makeWidget<KisWarningBlock>(parent);
+        grpAndroidWarningMessage = makeWidget<KisWarningBlock>(parent);
+        scrollAreaWidgetContents = makeWidget<QWidget>(parent);
+        formLayout_13 = new QFormLayout(scrollAreaWidgetContents);
+        cmbStartupSession = makeWidget<QComboBox>(parent);
+        chkSaveSessionOnQuit = makeWidget<QCheckBox>(parent);
+        m_chkConvertOnImport = makeWidget<QCheckBox>(parent);
+        label = makeWidget<QLabel>(parent);
+        m_undoStackSize = makeWidget<KisIntParseSpinBox>(parent);
+        chkCumulativeUndo = makeWidget<QCheckBox>(parent);
+        btnAdvancedCumulativeUndo = makeWidget<QPushButton>(parent);
+        chkShowRootLayer = makeWidget<QCheckBox>(scrollAreaWidgetContents);
+        formLayout_13->addRow(QString(), chkShowRootLayer);
+        chkUsageLogging = makeWidget<QCheckBox>(parent);
+        m_chkNativeFileDialog = makeWidget<QCheckBox>(parent);
+        intMaxBrushSize = makeWidget<QSpinBox>(parent);
+        chkForcedFontDPI = makeWidget<QGroupBox>(parent);
+        intForcedFontDPI = makeWidget<QSpinBox>(parent);
+        chkRenameMergedLayers = makeWidget<QCheckBox>(parent);
+        chkRenamePastedLayers = makeWidget<QCheckBox>(parent);
+        chkRenameDuplicatedLayers = makeWidget<QCheckBox>(parent);
+        chkEnableLongPress = makeWidget<QCheckBox>(parent);
+        m_groupBoxKineticScrollingSettings = makeWidget<QGroupBox>(parent);
+        m_cmbKineticScrollingGesture = makeWidget<QComboBox>(parent);
+        m_kineticScrollingSensitivitySlider = makeWidget<KisSliderSpinBox>(parent);
+        m_chkKineticScrollingHideScrollbars = makeWidget<QCheckBox>(parent);
+        chkIgnoreHighFunctionKeys = makeWidget<QCheckBox>(parent);
+    }
+
+private:
+    template <typename Widget>
+    Widget *makeWidget(QWidget *parent)
+    {
+        return new Widget(parent);
+    }
+
+    QWidget *makeTab(const QString &title)
+    {
+        auto *tab = new QWidget(tabWidget);
+        tabWidget->addTab(tab, title);
+        return tab;
+    }
+};
+
+} // namespace Ui
+]=])
         elseif(_ui_name STREQUAL "wdg_file_name_requester")
             file(WRITE "${_generated_header}" [=[
 #pragma once
@@ -826,7 +1098,27 @@ file(WRITE "${_external_include_dir}/seed_kritaui_forced_includes.h" [=[
 #pragma once
 
 #include <QIcon>
+#include <QItemSelection>
 #include <QToolButton>
+]=])
+
+file(WRITE "${_external_include_dir}/kcombobox.h" [=[
+#pragma once
+
+#include <QComboBox>
+
+class KComboBox : public QComboBox
+{
+public:
+    explicit KComboBox(QWidget *parent = nullptr)
+        : QComboBox(parent)
+    {
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KComboBox" [=[
+#pragma once
+#include "kcombobox.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/kconfig.h" [=[
