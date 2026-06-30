@@ -1527,6 +1527,11 @@ public:
         return m_name;
     }
 
+    bool hasGroup(const QString &) const
+    {
+        return false;
+    }
+
 private:
     QString m_name;
 };
