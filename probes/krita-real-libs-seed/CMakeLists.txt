@@ -3993,7 +3993,8 @@ file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
     lager::qt_cursor<type> name; \
     void set##name(const type &_lagerValue) { this->name.set(_lagerValue); }
 #define LAGER_QT_READER(type, name) \
-    lager::reader<type> name;
+    lager::reader<type> name; \
+    void name##Changed(const type &) {}
 #define LAGER_QT(name) name
 ]=])
 
@@ -4072,6 +4073,10 @@ public:
     void bind(Func &&func) const
     {
         func(m_value);
+    }
+
+    void nudge() const
+    {
     }
 
     template <typename Lens>
