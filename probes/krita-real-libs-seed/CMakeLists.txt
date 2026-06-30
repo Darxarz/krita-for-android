@@ -858,13 +858,25 @@ public:
 } // namespace Ui
 ]=])
         else()
-            file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${_ui}" _ui_content)
-            string(REGEX MATCH "<class>([^<]+)</class>" _ui_class_match "${_ui_content}")
-            set(_ui_class "${CMAKE_MATCH_1}")
-            if(NOT _ui_class)
-                set(_ui_class "${_ui_name}")
-            endif()
-            file(WRITE "${_generated_header}" [=[
+            if(_qt5_uic_executable)
+                execute_process(
+                    COMMAND "${_qt5_uic_executable}"
+                        -o "${_generated_header}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/${_ui}"
+                    RESULT_VARIABLE _seed_uic_result
+                    OUTPUT_VARIABLE _seed_uic_stdout
+                    ERROR_VARIABLE _seed_uic_stderr)
+                if(NOT _seed_uic_result EQUAL 0)
+                    message(FATAL_ERROR "uic failed for ${_ui}: ${_seed_uic_stderr}")
+                endif()
+            else()
+                file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${_ui}" _ui_content)
+                string(REGEX MATCH "<class>([^<]+)</class>" _ui_class_match "${_ui_content}")
+                set(_ui_class "${CMAKE_MATCH_1}")
+                if(NOT _ui_class)
+                    set(_ui_class "${_ui_name}")
+                endif()
+                file(WRITE "${_generated_header}" [=[
 #pragma once
 
 #include <QWidget>
@@ -883,6 +895,7 @@ public:
 
 using Ui_]=] "${_ui_class}" [=[ = Ui::]=] "${_ui_class}" [=[;
 ]=])
+            endif()
         endif()
 
         list(APPEND _generated_ui_headers "${_generated_header}")
@@ -944,15 +957,27 @@ find_program(_qt5_moc_executable
     NAMES moc
     HINTS "${ANDROID_PREFIX}/bin"
     NO_DEFAULT_PATH)
+find_program(_qt5_uic_executable
+    NAMES uic
+    HINTS "${ANDROID_PREFIX}/bin"
+    NO_DEFAULT_PATH)
 
 if(NOT _qt5_moc_executable)
     message(FATAL_ERROR "Could not find host Qt moc under ${ANDROID_PREFIX}/bin")
+endif()
+if(NOT _qt5_uic_executable)
+    message(FATAL_ERROR "Could not find host Qt uic under ${ANDROID_PREFIX}/bin")
 endif()
 
 if(NOT TARGET Qt5::moc)
     add_executable(Qt5::moc IMPORTED GLOBAL)
     set_target_properties(Qt5::moc PROPERTIES
         IMPORTED_LOCATION "${_qt5_moc_executable}")
+endif()
+if(NOT TARGET Qt5::uic)
+    add_executable(Qt5::uic IMPORTED GLOBAL)
+    set_target_properties(Qt5::uic PROPERTIES
+        IMPORTED_LOCATION "${_qt5_uic_executable}")
 endif()
 
 set(Qt5Core_VERSION_MAJOR 5)
@@ -1146,6 +1171,7 @@ file(WRITE "${_external_include_dir}/seed_kritaui_forced_includes.h" [=[
 
 #include <QIcon>
 #include <QItemSelection>
+#include <QLabel>
 #include <QToolButton>
 ]=])
 
@@ -2143,7 +2169,25 @@ file(WRITE "${_external_include_dir}/config-seexpr.h" [=[
 file(WRITE "${_external_include_dir}/kaboutdata.h" [=[
 #pragma once
 
+#include <QList>
 #include <QString>
+
+class KAboutPerson
+{
+public:
+    explicit KAboutPerson(const QString &name = QString())
+        : m_name(name)
+    {
+    }
+
+    QString name() const
+    {
+        return m_name;
+    }
+
+private:
+    QString m_name;
+};
 
 class KAboutData
 {
@@ -2177,6 +2221,19 @@ public:
     {
         return QStringLiteral("krita");
     }
+
+    QList<KAboutPerson> translators() const
+    {
+        return m_translators;
+    }
+
+    void setTranslator(const QString &name, const QString &)
+    {
+        m_translators = {KAboutPerson(name)};
+    }
+
+private:
+    QList<KAboutPerson> m_translators;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KAboutData" [=[
