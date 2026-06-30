@@ -3678,6 +3678,11 @@ public:
         return m_value;
     }
 
+    T operator()() const
+    {
+        return m_value;
+    }
+
     T &operator*()
     {
         return m_value;
@@ -3781,6 +3786,11 @@ public:
     }
 
     T get() const
+    {
+        return m_value;
+    }
+
+    T operator()() const
     {
         return m_value;
     }
@@ -3983,6 +3993,11 @@ public:
     }
 
     T get() const
+    {
+        return m_value;
+    }
+
+    T operator()() const
     {
         return m_value;
     }
