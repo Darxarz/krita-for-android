@@ -302,12 +302,28 @@ CI `Krita real libs seed Android` зеленый для этого слоя.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28312002206
 
-Начат следующий слой: upstream `libs/image` добавлен в sparse checkout и seed CMake как
-реальная Android shared library `libkritaimage.so`. Первый compile blocker
-`KSharedConfig::entryMap()` закрыт в generated KDE config shim; также добавлена генерация
-`config_convolution.h` для convolution painter. Дальнейшая проверка временно заблокирована
-GitHub Actions до старта runner из-за account billing/spending limit, не из-за ошибки
-workflow или CMake.
+Следующие PyKrita prerequisites закрыты в том же real-libs seed:
+
+- upstream `libs/image` собирается как `libkritaimage.so`;
+- upstream `libs/brush` собирается как `libkritalibbrush.so`;
+- upstream `libs/impex` собирается как `libkritaimpex.so`;
+- upstream `libs/ui` собирается как `libkritaui.so`;
+- upstream `libs/libkis` собирается как `libkritalibkis.so`.
+
+Для этих слоёв seed добавил минимальные Android/KDE/FFmpeg/SeExpr shims, но сами
+библиотеки берутся из upstream Krita. CI проверяет обе ABI, ELF machine type,
+NEEDED-зависимости и ключевые exported symbols.
+
+Зелёные runs:
+
+- `kritaimage`: https://github.com/Darxarz/krita-for-android/actions/runs/28323732554
+- `kritalibbrush`: https://github.com/Darxarz/krita-for-android/actions/runs/28325085418
+- `kritaimpex`: https://github.com/Darxarz/krita-for-android/actions/runs/28325491346
+- `kritaui`: https://github.com/Darxarz/krita-for-android/actions/runs/28479640404
+- `kritalibkis`: https://github.com/Darxarz/krita-for-android/actions/runs/28481920223
+
+Следующий слой начат: собрать настоящий Android `PyKrita.krita` (`krita.so`) против
+уже зелёных real seed libraries вместо старого interface-only link smoke.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 

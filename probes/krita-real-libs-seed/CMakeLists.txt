@@ -24,6 +24,8 @@ endif()
 
 set(QT_MAJOR_VERSION 5)
 set(KF_MAJOR 5)
+set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
+set(CMAKE_PREFIX_PATH "${ANDROID_PREFIX}")
 
 # Keep these values aligned with the upstream Krita 5 branch constants.  The
 # probe builds upstream library CMakeLists directly, without configuring all of
@@ -5686,3 +5688,38 @@ target_compile_definitions(kritalibkis PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritalibkis PRIVATE
     -fno-operator-names)
+
+set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
+set(KRITA_ANDROID_PYTHON_PREFIX "${ANDROID_PREFIX}" CACHE PATH "Android target Python dependency prefix")
+set(KRITA_ANDROID_PYKRITA_GENERATE_ONLY OFF)
+set(KRITA_ANDROID_PYKRITA_COMPILE_ONLY OFF)
+
+find_package(PythonLibrary 3.8 REQUIRED)
+find_package(SIP "4.19.13" REQUIRED)
+find_package(PyQt5 "5.6.0" REQUIRED)
+
+set(PYQT_VERSION_TAG ${PYQT5_VERSION_TAG})
+set(PYQT_SIP_NAME ${PYQT5_SIP_NAME})
+set(PYQT_SIP_TAGS ${PYQT5_SIP_TAGS})
+set(PYQT_SIP_DIR ${PYQT5_SIP_DIR})
+set(PYTHON_SITE_PACKAGES_INSTALL_DIR "lib/krita-python-libs")
+
+include_directories("${PYTHON_INCLUDE_DIRS}")
+
+add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/sip" "${CMAKE_CURRENT_BINARY_DIR}/pykrita-sip")
+
+if(TARGET python_module_PyKrita_krita)
+    target_include_directories(python_module_PyKrita_krita
+        PRIVATE
+            "${PYTHON_INCLUDE_DIRS}"
+            "${ANDROID_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages/PyQt5/bindings"
+            "${ANDROID_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages/PyQt5/bindings/QtCore"
+            "${ANDROID_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages/PyQt5/bindings/QtGui"
+            "${ANDROID_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages/PyQt5/bindings/QtXml"
+            "${ANDROID_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages/PyQt5/bindings/QtWidgets"
+            "${KRITA_SOURCE_DIR}"
+            "${CMAKE_CURRENT_BINARY_DIR}"
+            "${_external_include_dir}")
+    target_link_options(python_module_PyKrita_krita PRIVATE
+        -Wl,-z,max-page-size=16384)
+endif()

@@ -16,6 +16,7 @@ qt_concurrent="libQt5Concurrent_${abi}.so"
 qt_sql="libQt5Sql_${abi}.so"
 qt_printsupport="libQt5PrintSupport_${abi}.so"
 qt_androidextras="libQt5AndroidExtras_${abi}.so"
+python_library="libpython3.14.so"
 
 declare -A library_names=(
     [version]="libkritaversion.so"
@@ -38,12 +39,13 @@ declare -A library_names=(
     [impex]="libkritaimpex.so"
     [ui]="libkritaui.so"
     [libkis]="libkritalibkis.so"
+    [pykrita]="krita.so"
 )
 
 ordered_libraries=(
     version global plugin multiarch color store resources widgetutils command
     pigment metadata flake resourcewidgets widgets psdutils image brush impex
-    ui libkis
+    ui libkis pykrita
 )
 
 declare -A library_paths=()
@@ -232,3 +234,15 @@ check_deps libkis \
     "$qt_gui" \
     "$qt_widgets"
 check_symbol libkis "Krita"
+
+check_deps pykrita \
+    "$python_library" \
+    libkritalibkis.so \
+    libkritaui.so \
+    libkritaimage.so \
+    libkritalibbrush.so \
+    "$qt_core" \
+    "$qt_gui" \
+    "$qt_widgets" \
+    "$qt_xml"
+check_symbol pykrita "PyInit_krita"

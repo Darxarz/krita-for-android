@@ -55,6 +55,14 @@ jobs:
             libunibreak-dev \
             libxsimd-dev
 
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Download Android PyQt5 dependency prefix
         env:
           GH_TOKEN: ${{ github.token }}
@@ -78,15 +86,22 @@ jobs:
 
           case "${{ matrix.abi }}" in
             arm64-v8a)
+              triplet="aarch64-linux-android"
               machine_pattern="Machine:[[:space:]]*AArch64"
               ;;
             x86_64)
+              triplet="x86_64-linux-android"
               machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
               ;;
           esac
 
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
           echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
 
+          test -f "$prefix/include/python3.14/Python.h"
+          test -f "$prefix/lib/libpython3.14.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtCore/QtCore.toml"
           test -d "$prefix/include/QtCore"
           test -d "$prefix/include/QtGui"
           test -d "$prefix/include/QtNetwork"
@@ -206,6 +221,7 @@ jobs:
             kritaimpex \
             kritaui \
             kritalibkis \
+            python_module_PyKrita_krita \
             --verbose
 
           bash scripts/verify-krita-real-libs-seed.sh \
