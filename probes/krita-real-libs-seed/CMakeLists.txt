@@ -1006,6 +1006,8 @@ file(MAKE_DIRECTORY
     "${_external_include_dir}/zug/compat"
     "${_external_include_dir}/zug/reducing"
     "${_external_include_dir}/zug/transducer"
+    "${_external_include_dir}/libavutil"
+    "${_external_include_dir}/libswscale"
     "${_external_include_dir}/unwindstack")
 
 if(EXISTS "/usr/include/boost")
@@ -1546,6 +1548,181 @@ void png_set_text(png_structp png_ptr, png_infop info_ptr, png_textp text_ptr, i
 void png_set_iCCP(png_structp png_ptr, png_infop info_ptr, png_const_charp name, int compression_type, png_const_bytep profile, png_uint_32 proflen);
 void png_set_pHYs(png_structp png_ptr, png_infop info_ptr, png_uint_32 res_x, png_uint_32 res_y, int unit_type);
 void png_set_sRGB_gAMA_and_cHRM(png_structp png_ptr, png_infop info_ptr, int intent);
+
+#ifdef __cplusplus
+}
+#endif
+]=])
+
+file(WRITE "${_external_include_dir}/libavutil/pixfmt.h" [=[
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef enum AVPixelFormat {
+    AV_PIX_FMT_NONE = -1,
+    AV_PIX_FMT_YUV420P = 0,
+    AV_PIX_FMT_NV12 = 1,
+    AV_PIX_FMT_NV21 = 2,
+    AV_PIX_FMT_BGR0 = 3,
+    AV_PIX_FMT_BGRA = 4
+} AVPixelFormat;
+
+#ifdef __cplusplus
+}
+#endif
+]=])
+
+file(WRITE "${_external_include_dir}/libavutil/imgutils.h" [=[
+#pragma once
+
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "pixfmt.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static inline void av_freep(void *ptr)
+{
+    void **target = (void **)ptr;
+    if (target && *target) {
+        free(*target);
+        *target = NULL;
+    }
+}
+
+static inline int av_image_alloc(uint8_t *pointers[4],
+                                 int linesizes[4],
+                                 int width,
+                                 int height,
+                                 enum AVPixelFormat pix_fmt,
+                                 int align)
+{
+    (void)pix_fmt;
+    (void)align;
+
+    if (!pointers || !linesizes || width <= 0 || height <= 0) {
+        return -1;
+    }
+
+    size_t size = (size_t)width * (size_t)height * 4u;
+    pointers[0] = (uint8_t *)malloc(size);
+    pointers[1] = NULL;
+    pointers[2] = NULL;
+    pointers[3] = NULL;
+    linesizes[0] = width * 4;
+    linesizes[1] = 0;
+    linesizes[2] = 0;
+    linesizes[3] = 0;
+
+    return pointers[0] ? (int)size : -1;
+}
+
+static inline void av_image_copy2(uint8_t *dst_data[4],
+                                  const int dst_linesizes[4],
+                                  const uint8_t *src_data[4],
+                                  const int src_linesizes[4],
+                                  enum AVPixelFormat pix_fmt,
+                                  int width,
+                                  int height)
+{
+    (void)pix_fmt;
+
+    if (!dst_data || !src_data || !dst_data[0] || !src_data[0] || width <= 0 || height <= 0) {
+        return;
+    }
+
+    int dst_stride = dst_linesizes ? dst_linesizes[0] : width;
+    int src_stride = src_linesizes ? src_linesizes[0] : width;
+    int bytes = width;
+    for (int y = 0; y < height; ++y) {
+        memcpy(dst_data[0] + (size_t)y * (size_t)dst_stride,
+               src_data[0] + (size_t)y * (size_t)src_stride,
+               (size_t)bytes);
+    }
+}
+
+#ifdef __cplusplus
+}
+#endif
+]=])
+
+file(WRITE "${_external_include_dir}/libswscale/swscale.h" [=[
+#pragma once
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#include "../libavutil/pixfmt.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define SWS_FAST_BILINEAR 1
+
+typedef struct SwsContext {
+    int unused;
+} SwsContext;
+
+static inline struct SwsContext *sws_getCachedContext(struct SwsContext *context,
+                                                      int srcW,
+                                                      int srcH,
+                                                      enum AVPixelFormat srcFormat,
+                                                      int dstW,
+                                                      int dstH,
+                                                      enum AVPixelFormat dstFormat,
+                                                      int flags,
+                                                      void *srcFilter,
+                                                      void *dstFilter,
+                                                      const double *param)
+{
+    (void)srcW;
+    (void)srcH;
+    (void)srcFormat;
+    (void)dstW;
+    (void)dstH;
+    (void)dstFormat;
+    (void)flags;
+    (void)srcFilter;
+    (void)dstFilter;
+    (void)param;
+
+    if (context) {
+        return context;
+    }
+
+    return (struct SwsContext *)calloc(1u, sizeof(struct SwsContext));
+}
+
+static inline void sws_freeContext(struct SwsContext *context)
+{
+    free(context);
+}
+
+static inline int sws_scale(struct SwsContext *context,
+                            const uint8_t *const srcSlice[],
+                            const int srcStride[],
+                            int srcSliceY,
+                            int srcSliceH,
+                            uint8_t *const dst[],
+                            const int dstStride[])
+{
+    (void)context;
+    (void)srcSlice;
+    (void)srcStride;
+    (void)srcSliceY;
+    (void)dst;
+    (void)dstStride;
+
+    return srcSliceH;
+}
 
 #ifdef __cplusplus
 }
