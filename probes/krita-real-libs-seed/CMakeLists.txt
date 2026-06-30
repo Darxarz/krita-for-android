@@ -38,6 +38,7 @@ set(KRITA_GIT_SHA1_STRING "")
 set(KRITA_GIT_BRANCH_STRING "")
 set(GENERIC_KRITA_LIB_VERSION "20.0.0")
 set(GENERIC_KRITA_LIB_SOVERSION "20")
+set(HAVE_HDR OFF)
 set(HAVE_OCIO OFF)
 
 include(GNUInstallDirs)
@@ -1173,6 +1174,7 @@ file(WRITE "${_external_include_dir}/seed_kritaui_forced_includes.h" [=[
 #include <QItemSelection>
 #include <QLabel>
 #include <QToolButton>
+#include "klocalizedstring.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/kcombobox.h" [=[
@@ -2081,8 +2083,47 @@ file(WRITE "${_external_include_dir}/kpagedialog.h" [=[
 #pragma once
 
 #include <QDialog>
+#include <QIcon>
+#include <QObject>
 #include <QString>
 #include <QWidget>
+
+class KPageWidgetItem : public QObject
+{
+public:
+    explicit KPageWidgetItem(QWidget *widget, const QString &name = QString())
+        : QObject(widget)
+        , m_widget(widget)
+        , m_name(name)
+    {
+    }
+
+    QWidget *widget() const
+    {
+        return m_widget;
+    }
+
+    QString name() const
+    {
+        return m_name;
+    }
+
+    void setHeader(const QString &header)
+    {
+        m_header = header;
+    }
+
+    void setIcon(const QIcon &icon)
+    {
+        m_icon = icon;
+    }
+
+private:
+    QWidget *m_widget = nullptr;
+    QString m_name;
+    QString m_header;
+    QIcon m_icon;
+};
 
 class KPageDialog : public QDialog
 {
@@ -2109,9 +2150,33 @@ public:
     {
     }
 
-    void addPage(QWidget *, const QString &)
+    KPageWidgetItem *addPage(QWidget *widget, const QString &name)
     {
+        m_currentPage = new KPageWidgetItem(widget, name);
+        return m_currentPage;
     }
+
+    void addPage(KPageWidgetItem *item)
+    {
+        if (item) {
+            m_currentPage = item;
+        }
+    }
+
+    KPageWidgetItem *currentPage() const
+    {
+        return m_currentPage;
+    }
+
+    void setCurrentPage(KPageWidgetItem *item)
+    {
+        if (item) {
+            m_currentPage = item;
+        }
+    }
+
+private:
+    KPageWidgetItem *m_currentPage = nullptr;
 };
 ]=])
 file(WRITE "${_external_include_dir}/KPageDialog" [=[
@@ -4482,6 +4547,7 @@ set(QT_QTCORE_LIBRARY Qt5::Core)
 set(QUAZIP_INCLUDE_DIRS "${_external_include_dir}")
 set(QUAZIP_LIBRARIES "")
 configure_file("${KRITA_SOURCE_DIR}/KoConfig.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/KoConfig.h")
+configure_file("${KRITA_SOURCE_DIR}/config-hdr.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-hdr.h")
 configure_file("${KRITA_SOURCE_DIR}/config-ocio.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-ocio.h")
 configure_file("${KRITA_SOURCE_DIR}/config_convolution.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config_convolution.h")
 configure_file("${KRITA_SOURCE_DIR}/config-hash-table-implementation.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-hash-table-implementation.h")
