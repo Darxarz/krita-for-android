@@ -1626,7 +1626,7 @@ static inline int av_image_alloc(uint8_t *pointers[4],
 
 static inline void av_image_copy2(uint8_t *dst_data[4],
                                   const int dst_linesizes[4],
-                                  const uint8_t *src_data[4],
+                                  uint8_t *src_data[4],
                                   const int src_linesizes[4],
                                   enum AVPixelFormat pix_fmt,
                                   int width,
