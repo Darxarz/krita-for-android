@@ -3884,6 +3884,11 @@ public:
         return m_value;
     }
 
+    T get() const
+    {
+        return m_value;
+    }
+
     void set(const T &value)
     {
         m_value = value;
@@ -3944,6 +3949,7 @@ file(WRITE "${_external_include_dir}/lager/reader.hpp" [=[
 
 #include <functional>
 #include <type_traits>
+#include <tuple>
 #include <utility>
 
 #include "cursor.hpp"
@@ -4005,6 +4011,13 @@ template <typename... Args>
 class with_result
 {
 public:
+    using value_type = std::tuple<source_value_t<Args>...>;
+
+    value_type get() const
+    {
+        return {};
+    }
+
     template <typename Func>
     auto map(Func &&) const -> reader<std::decay_t<std::invoke_result_t<Func, source_value_t<Args>...>>>
     {
