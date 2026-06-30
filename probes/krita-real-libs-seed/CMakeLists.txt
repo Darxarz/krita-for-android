@@ -3714,6 +3714,16 @@ public:
         func(m_value);
     }
 
+    template <typename Func>
+    void watch(Func &&func) const
+    {
+        if constexpr (std::is_invocable_v<Func, const T &>) {
+            func(m_value);
+        } else if constexpr (std::is_invocable_v<Func>) {
+            func();
+        }
+    }
+
     template <typename Member,
               typename Object = T,
               typename = std::enable_if_t<std::is_class<Object>::value || std::is_union<Object>::value>>
@@ -3824,6 +3834,16 @@ public:
     void bind(Func &&func) const
     {
         func(m_value);
+    }
+
+    template <typename Func>
+    void watch(Func &&func) const
+    {
+        if constexpr (std::is_invocable_v<Func, const T &>) {
+            func(m_value);
+        } else if constexpr (std::is_invocable_v<Func>) {
+            func();
+        }
     }
 
     template <typename Member,
@@ -4019,6 +4039,36 @@ public:
     void bind(Func &&func) const
     {
         func(m_value);
+    }
+
+    template <typename Lens>
+    auto zoom(const Lens &lens) const -> reader<std::decay_t<decltype(lens.get(std::declval<const T &>()))>>
+    {
+        using Result = std::decay_t<decltype(lens.get(std::declval<const T &>()))>;
+        return reader<Result>(lens.get(m_value));
+    }
+
+    template <typename Func>
+    auto map(Func &&func) const -> reader<std::decay_t<decltype(func(std::declval<const T &>()))>>
+    {
+        using Result = std::decay_t<decltype(func(std::declval<const T &>()))>;
+        return reader<Result>(func(m_value));
+    }
+
+    template <typename Func>
+    auto xform(Func &&func) const -> reader<std::decay_t<decltype(func(std::declval<const T &>()))>>
+    {
+        return map(std::forward<Func>(func));
+    }
+
+    template <typename Func>
+    void watch(Func &&func) const
+    {
+        if constexpr (std::is_invocable_v<Func, const T &>) {
+            func(m_value);
+        } else if constexpr (std::is_invocable_v<Func>) {
+            func();
+        }
     }
 
 private:
