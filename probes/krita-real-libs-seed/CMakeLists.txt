@@ -1247,7 +1247,32 @@ public:
         : QComboBox(parent)
     {
     }
+
+    void setCurrentItem(const QString &text, bool insert = false)
+    {
+        int index = findText(text);
+        if (index < 0 && insert) {
+            addItem(text);
+            index = count() - 1;
+        }
+        if (index >= 0) {
+            setCurrentIndex(index);
+        }
+    }
+
+    void setCurrentItem(int index)
+    {
+        setCurrentIndex(index);
+    }
 };
+
+namespace QtPrivate {
+template <>
+struct HasQ_OBJECT_Macro<KComboBox>
+{
+    enum { Value = true };
+};
+} // namespace QtPrivate
 ]=])
 file(WRITE "${_external_include_dir}/KComboBox" [=[
 #pragma once
