@@ -121,6 +121,7 @@ jobs:
             config-hash-table-implementation.h.cmake \
             config-qt-patches-present.h.cmake \
             config-updaters.h.cmake \
+            config-use-surface-color-management-api.h.cmake \
             KoConfig.h.cmake \
             3rdparty_vendor/raqm \
             cmake/modules \

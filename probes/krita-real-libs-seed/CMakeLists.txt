@@ -822,6 +822,13 @@ file(WRITE "${_external_include_dir}/seed_kritawidgets_forced_includes.h" [=[
 #include "klocalizedstring.h"
 ]=])
 
+file(WRITE "${_external_include_dir}/seed_kritaui_forced_includes.h" [=[
+#pragma once
+
+#include <QIcon>
+#include <QToolButton>
+]=])
+
 file(WRITE "${_external_include_dir}/kconfig.h" [=[
 #pragma once
 
@@ -2865,6 +2872,9 @@ class QuaZipFileInfo
 file(WRITE "${_external_include_dir}/lager/state.hpp" [=[
 #pragma once
 
+#include <type_traits>
+#include <utility>
+
 namespace lager {
 
 struct automatic_tag
@@ -2891,6 +2901,40 @@ public:
     void set(const T &value)
     {
         m_value = value;
+    }
+
+    template <typename Member,
+              typename Object = T,
+              typename = std::enable_if_t<std::is_class<Object>::value || std::is_union<Object>::value>>
+    auto operator[](Member Object::*member) const -> state<std::decay_t<Member>, Tag>
+    {
+        return state<std::decay_t<Member>, Tag>(m_value.*member);
+    }
+
+    template <typename Lens>
+    auto zoom(const Lens &lens) const -> state<std::decay_t<decltype(lens.get(std::declval<const T &>()))>, Tag>
+    {
+        using Result = std::decay_t<decltype(lens.get(std::declval<const T &>()))>;
+        return state<Result, Tag>(lens.get(m_value));
+    }
+
+    template <typename Func>
+    auto map(Func &&func) const -> state<std::decay_t<decltype(func(m_value))>, Tag>
+    {
+        using Result = std::decay_t<decltype(func(m_value))>;
+        return state<Result, Tag>(func(m_value));
+    }
+
+    template <typename Func>
+    auto xform(Func &&func) const -> state<std::decay_t<decltype(func(m_value))>, Tag>
+    {
+        return map(std::forward<Func>(func));
+    }
+
+    template <typename Func>
+    void update(Func &&func)
+    {
+        m_value = func(m_value);
     }
 
 private:
@@ -2955,6 +2999,25 @@ public:
         return cursor<Result>(lens.get(m_value));
     }
 
+    template <typename Func>
+    auto map(Func &&func) const -> cursor<std::decay_t<decltype(func(m_value))>>
+    {
+        using Result = std::decay_t<decltype(func(m_value))>;
+        return cursor<Result>(func(m_value));
+    }
+
+    template <typename Func>
+    auto xform(Func &&func) const -> cursor<std::decay_t<decltype(func(m_value))>>
+    {
+        return map(std::forward<Func>(func));
+    }
+
+    template <typename Func>
+    void update(Func &&func)
+    {
+        m_value = func(m_value);
+    }
+
 private:
     T m_value {};
 };
@@ -3000,6 +3063,19 @@ public:
         m_value = value;
     }
 
+    template <typename Func>
+    auto map(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(m_value))>>
+    {
+        using Result = std::decay_t<decltype(func(m_value))>;
+        return qt_cursor<Result>(cursor<Result>(func(m_value)));
+    }
+
+    template <typename Func>
+    auto xform(Func &&func) const -> qt_cursor<std::decay_t<decltype(func(m_value))>>
+    {
+        return map(std::forward<Func>(func));
+    }
+
 private:
     T m_value {};
 };
@@ -3011,10 +3087,13 @@ file(WRITE "${_external_include_dir}/lager/extra/qt.hpp" [=[
 #pragma once
 
 #include "../cursor.hpp"
+#include "../reader.hpp"
 
 #define LAGER_QT_CURSOR(type, name) \
     lager::qt_cursor<type> name; \
     void set##name(const type &_lagerValue) { this->name.set(_lagerValue); }
+#define LAGER_QT_READER(type, name) \
+    lager::reader<type> name;
 #define LAGER_QT(name) name
 ]=])
 
@@ -3044,6 +3123,22 @@ class reader
 {
 public:
     using value_type = T;
+
+    reader() = default;
+
+    template <typename Source>
+    explicit reader(const Source &source)
+    {
+        (void)source;
+    }
+
+    T get() const
+    {
+        return T {};
+    }
+
+private:
+    T m_value {};
 };
 
 template <typename... Args>
@@ -3643,6 +3738,7 @@ configure_file("${KRITA_SOURCE_DIR}/config_convolution.h.cmake" "${CMAKE_CURRENT
 configure_file("${KRITA_SOURCE_DIR}/config-hash-table-implementation.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-hash-table-implementation.h")
 configure_file("${KRITA_SOURCE_DIR}/config-qt-patches-present.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-qt-patches-present.h")
 configure_file("${KRITA_SOURCE_DIR}/config-updaters.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-updaters.h")
+configure_file("${KRITA_SOURCE_DIR}/config-use-surface-color-management-api.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-use-surface-color-management-api.h")
 configure_file("${KRITA_SOURCE_DIR}/config-gsl.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-gsl.h")
 configure_file("${KRITA_SOURCE_DIR}/config-safe-asserts.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-safe-asserts.h")
 configure_file("${KRITA_SOURCE_DIR}/config-android-stdio-forwarding.h.cmake" "${CMAKE_CURRENT_BINARY_DIR}/config-android-stdio-forwarding.h")
@@ -4031,4 +4127,4 @@ target_compile_definitions(kritaui PRIVATE
     QT_NO_SIGNALS_SLOTS_KEYWORDS)
 target_compile_options(kritaui PRIVATE
     -fno-operator-names
-    -include QIcon)
+    -include "${_external_include_dir}/seed_kritaui_forced_includes.h")
