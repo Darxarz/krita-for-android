@@ -138,6 +138,7 @@ jobs:
             libs/image \
             libs/impex \
             libs/koplugin \
+            libs/libkis \
             libs/metadata \
             libs/multiarch \
             libs/pigment \
@@ -203,6 +204,7 @@ jobs:
             kritalibbrush \
             kritaimpex \
             kritaui \
+            kritalibkis \
             --verbose
 
           version_library="$(find "$build_dir" -name 'libkritaversion.so' -print -quit)"
@@ -224,6 +226,7 @@ jobs:
           brush_library="$(find "$build_dir" -name 'libkritalibbrush.so' -print -quit)"
           impex_library="$(find "$build_dir" -name 'libkritaimpex.so' -print -quit)"
           ui_library="$(find "$build_dir" -name 'libkritaui.so' -print -quit)"
+          libkis_library="$(find "$build_dir" -name 'libkritalibkis.so' -print -quit)"
           test -n "$version_library"
           test -n "$global_library"
           test -n "$plugin_library"
@@ -243,6 +246,7 @@ jobs:
           test -n "$brush_library"
           test -n "$impex_library"
           test -n "$ui_library"
+          test -n "$libkis_library"
           file "$version_library"
           file "$global_library"
           file "$plugin_library"
@@ -262,6 +266,7 @@ jobs:
           file "$brush_library"
           file "$impex_library"
           file "$ui_library"
+          file "$libkis_library"
 
           "$readelf" -h "$version_library" | tee "$RUNNER_TEMP/kritaversion-elf-header.txt"
           grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritaversion-elf-header.txt"
@@ -512,6 +517,20 @@ jobs:
 
           "$readelf" -Ws "$ui_library" | tee "$RUNNER_TEMP/kritaui-symbols.txt"
           grep -q "KisPart" "$RUNNER_TEMP/kritaui-symbols.txt"
+
+          "$readelf" -h "$libkis_library" | tee "$RUNNER_TEMP/kritalibkis-elf-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/kritalibkis-elf-header.txt"
+
+          "$readelf" -d "$libkis_library" | tee "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libkritaui.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libkritaimage.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libkritaversion.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Core_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Gui_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+          grep -q "Shared library: \\[libQt5Widgets_${{ matrix.abi }}.so\\]" "$RUNNER_TEMP/kritalibkis-dynamic.txt"
+
+          "$readelf" -Ws "$libkis_library" | tee "$RUNNER_TEMP/kritalibkis-symbols.txt"
+          grep -q "Krita" "$RUNNER_TEMP/kritalibkis-symbols.txt"
 
       - name: Upload real Krita seed libs
         uses: actions/upload-artifact@v4

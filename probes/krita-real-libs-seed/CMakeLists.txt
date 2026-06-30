@@ -5663,3 +5663,21 @@ target_compile_definitions(kritaui PRIVATE
 target_compile_options(kritaui PRIVATE
     -fno-operator-names
     -include "${_external_include_dir}/seed_kritaui_forced_includes.h")
+
+disable_seed_tests(libs/libkis)
+
+set(_kritalibkis_build_dir "${CMAKE_CURRENT_BINARY_DIR}/kritalibkis")
+add_subdirectory("${KRITA_SOURCE_DIR}/libs/libkis" "${_kritalibkis_build_dir}")
+
+target_include_directories(kritalibkis
+    PUBLIC
+        "$<BUILD_INTERFACE:${KRITA_SOURCE_DIR}/libs/libkis>"
+        "$<BUILD_INTERFACE:${_kritalibkis_build_dir}>"
+    PRIVATE
+        "${KRITA_SOURCE_DIR}"
+        "${CMAKE_CURRENT_BINARY_DIR}"
+        "${_external_include_dir}")
+target_compile_definitions(kritalibkis PRIVATE
+    QT_NO_SIGNALS_SLOTS_KEYWORDS)
+target_compile_options(kritalibkis PRIVATE
+    -fno-operator-names)
