@@ -1608,7 +1608,23 @@ public:
     }
 
     template <typename T>
+    T readPathEntry(const QString &, const T &defaultValue = T()) const
+    {
+        return defaultValue;
+    }
+
+    QString readPathEntry(const QString &, const char *defaultValue) const
+    {
+        return QString::fromUtf8(defaultValue ? defaultValue : "");
+    }
+
+    template <typename T>
     void writeEntry(const QString &, const T &, WriteConfigFlags = Normal)
+    {
+    }
+
+    template <typename T>
+    void writePathEntry(const QString &, const T &, WriteConfigFlags = Normal)
     {
     }
 
@@ -1630,6 +1646,16 @@ public:
     bool hasGroup(const QString &) const
     {
         return false;
+    }
+
+    KConfigGroup group(const QString &name) const
+    {
+        return KConfigGroup(config(), name);
+    }
+
+    KConfigGroup group(const char *name) const
+    {
+        return KConfigGroup(config(), name);
     }
 
     bool hasDefault(const QString &) const
