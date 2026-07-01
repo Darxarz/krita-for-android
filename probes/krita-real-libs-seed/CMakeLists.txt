@@ -1898,6 +1898,14 @@ file(WRITE "${_external_include_dir}/KSharedConfig" [=[
 #pragma once
 #include "ksharedconfig.h"
 ]=])
+file(WRITE "${_external_include_dir}/kconfigbase.h" [=[
+#pragma once
+#include "ksharedconfig.h"
+]=])
+file(WRITE "${_external_include_dir}/KConfigBase" [=[
+#pragma once
+#include "kconfigbase.h"
+]=])
 
 file(WRITE "${_external_include_dir}/kconfiggroup.h" [=[
 #pragma once
