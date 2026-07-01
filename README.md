@@ -32,6 +32,8 @@
 - `.github/workflows/krita-python-runtime-payload-android.yml` - первый packaging layer:
   собирает APK-похожий payload из Android Python/PyQt, real Krita libraries,
   `PyKrita.krita` и built-in PyKrita Python package.
+- `.github/workflows/krita-python-runtime-init-probe-android.yml` - собирает Android
+  `.so` с `PyConfig`-инициализацией Python из staged payload paths.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.
