@@ -354,9 +354,16 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28485870841
 
 Следующий init layer начат: `probes/krita-python-runtime-init/` собирает Android shared
 library, которая на runtime выставляет `PyConfig.home`, `module_search_paths` для staged
-payload и вызывает `Py_InitializeFromConfig()`. CI пока проверяет compile/link,
-ELF machine type, NEEDED `libpython3.14.so` и exported probe symbol; реальный запуск на
-планшете останется следующим слоем после подключения этого `.so` к APK/app process.
+payload и вызывает `Py_InitializeFromConfig()`. CI проверяет compile/link,
+ELF machine type, NEEDED `libpython3.14.so` и exported probe symbol.
+
+CI `Krita Python runtime init probe Android` зелёный для обеих ABI.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486088495
+
+Следующий packaging layer начат: нужно подключить staged payload и init probe к
+настоящему Android APK-контейнеру, а затем уже переходить к запуску в app process и
+первому тесту на планшете.
 
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.

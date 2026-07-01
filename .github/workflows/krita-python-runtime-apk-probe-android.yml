@@ -1,0 +1,134 @@
+name: Krita Python runtime APK probe Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-python-runtime-apk-probe-android.yml"
+      - "scripts/package-krita-python-runtime-apk-probe.sh"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  apk-probe:
+    name: Package Python runtime APK probe ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.3.13750724"
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip unzip
+
+      - name: Resolve ABI metadata
+        run: |
+          set -eux
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a)
+              machine_pattern="Machine:[[:space:]]*AArch64"
+              ;;
+            x86_64)
+              machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
+              ;;
+          esac
+
+          echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
+
+      - name: Download Krita Python runtime payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-python-runtime-payload-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          mkdir -p "$payload"
+          gh run download "$run_id" \
+            --name "krita-python-runtime-payload-${{ matrix.abi }}" \
+            --dir "$payload"
+
+          test -f "$payload/jniLibs/${{ matrix.abi }}/libpython3.14.so"
+          test -f "$payload/assets/python/krita-python-libs/PyKrita/krita.so"
+
+      - name: Download Krita Python runtime init probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-python-runtime-init-probe-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          init_probe_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}"
+          mkdir -p "$init_probe_dir"
+          gh run download "$run_id" \
+            --name "krita-python-runtime-init-probe-${{ matrix.abi }}" \
+            --dir "$init_probe_dir"
+
+          test -f "$init_probe_dir/libkrita_python_runtime_init_probe.so"
+
+      - name: Package APK probe
+        run: |
+          set -eux
+
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          init_probe="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}/libkrita_python_runtime_init_probe.so"
+          output_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}"
+          android_jar="$ANDROID_HOME/platforms/android-35/android.jar"
+          build_tools_dir="$ANDROID_HOME/build-tools/35.0.0"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          bash scripts/package-krita-python-runtime-apk-probe.sh \
+            "${{ matrix.abi }}" \
+            "$payload" \
+            "$init_probe" \
+            "$output_dir" \
+            "$android_jar" \
+            "$build_tools_dir" \
+            "$readelf" \
+            "$machine_pattern"
+
+      - name: Upload Krita Python runtime APK probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-python-runtime-apk-probe-${{ matrix.abi }}
+          path: |
+            artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}/krita-python-runtime-probe-${{ matrix.abi }}.apk
+            artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}/MANIFEST.txt
