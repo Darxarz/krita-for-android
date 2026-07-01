@@ -37,6 +37,9 @@
 - `.github/workflows/krita-python-runtime-apk-probe-android.yml` - упаковывает runtime
   payload и init probe в минимальный подписанный Android APK-контейнер и проверяет
   ключевые `lib/<abi>`/`assets/python` entries.
+- `.github/workflows/krita-python-runtime-launch-apk-probe-android.yml` - следующий
+  launchable probe: собирает JNI launcher + Activity, чтобы на устройстве можно было
+  скопировать `assets/python` в app-private storage и вызвать PyConfig init probe.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.

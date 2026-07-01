@@ -365,6 +365,12 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486088495
 настоящему Android APK-контейнеру, а затем уже переходить к запуску в app process и
 первому тесту на планшете.
 
+CI `Krita Python runtime APK probe Android` зелёный для обеих ABI. Этот layer собирает
+минимальный подписанный APK-контейнер с `lib/<abi>` и `assets/python`, проверяет APK
+signature, entries и ELF machine type для ключевых native libraries.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486382851
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
