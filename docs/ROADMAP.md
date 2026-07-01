@@ -379,6 +379,11 @@ CI проверяет сборку launcher `.so`, NEEDED `libkrita_python_runti
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486651957
 
+Первый реальный планшетный запуск показал launch window, но контент оставался белым.
+Добавляется diagnostic rebuild: native libraries больше не грузятся в Java static
+initializer до отрисовки UI; Activity показывает крупные screen/logcat breadcrumbs для
+`libpython`, init-probe, launcher, copy assets и `PyConfig` stage.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
