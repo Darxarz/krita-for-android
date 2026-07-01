@@ -371,6 +371,14 @@ signature, entries и ELF machine type для ключевых native libraries.
 
 Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486382851
 
+Следующий device-facing layer тоже добавлен: `Krita Python runtime launch APK probe
+Android` собирает launchable APK с `MainActivity`, Java-copy `assets/python` в
+app-private storage, JNI launcher и вызовом `krita_android_python_runtime_init_probe`.
+CI проверяет сборку launcher `.so`, NEEDED `libkrita_python_runtime_init_probe.so`,
+наличие JNI symbol, `classes.dex`, APK signature и ключевые native/assets entries.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486651957
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
