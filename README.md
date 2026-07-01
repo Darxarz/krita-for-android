@@ -29,6 +29,9 @@
   `libkritaplugin.so`, `libkritamultiarch.so`, `libkritacolor.so` и
   `libkritastore.so`, `libkritaresources.so`, `libkritawidgetutils.so` и
   `libkritacommand.so`, `libkritapigment.so`, `libkritametadata.so`.
+- `.github/workflows/krita-python-runtime-payload-android.yml` - первый packaging layer:
+  собирает APK-похожий payload из Android Python/PyQt, real Krita libraries,
+  `PyKrita.krita` и built-in PyKrita Python package.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.

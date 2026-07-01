@@ -1,0 +1,138 @@
+name: Krita Python runtime payload Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-python-runtime-payload-android.yml"
+      - "scripts/stage-krita-python-runtime-payload.sh"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  payload:
+    name: Stage Krita Python runtime payload ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "ndk;27.3.13750724"
+
+      - name: Resolve ABI metadata
+        run: |
+          set -eux
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a)
+              triplet="aarch64-linux-android"
+              machine_pattern="Machine:[[:space:]]*AArch64"
+              ;;
+            x86_64)
+              triplet="x86_64-linux-android"
+              machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
+              ;;
+          esac
+
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
+          echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
+
+      - name: Download Android PyQt5 dependency prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-deps-pyqt5-minimal-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          mkdir -p "$prefix"
+          gh run download "$run_id" \
+            --name "krita-deps-pyqt5-minimal-${{ matrix.abi }}" \
+            --dir "$prefix"
+
+          test -f "$prefix/lib/libpython3.14.so"
+          test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
+
+      - name: Download real Krita seed libraries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-real-libs-seed-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          seed_dir="$GITHUB_WORKSPACE/artifacts/krita-real-libs-seed/${{ matrix.abi }}"
+          mkdir -p "$seed_dir"
+          gh run download "$run_id" \
+            --name "krita-real-libs-seed-${{ matrix.abi }}" \
+            --dir "$seed_dir"
+
+          test -n "$(find "$seed_dir" -name libkritapykrita.so -print -quit)"
+          test -n "$(find "$seed_dir" -name krita.so -print -quit)"
+
+      - name: Clone sparse Krita PyKrita files
+        run: |
+          set -eux
+
+          if ! git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita; then
+            rm -rf upstream/krita
+            git clone --depth 1 --filter=blob:none --sparse https://github.com/KDE/krita.git upstream/krita
+          fi
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            plugins/extensions/pykrita/plugin/krita
+
+      - name: Stage runtime payload
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          seed_dir="$GITHUB_WORKSPACE/artifacts/krita-real-libs-seed/${{ matrix.abi }}"
+          output_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          bash scripts/stage-krita-python-runtime-payload.sh \
+            "${{ matrix.abi }}" \
+            "$triplet" \
+            "$prefix" \
+            "$seed_dir" \
+            "$GITHUB_WORKSPACE/upstream/krita" \
+            "$output_dir" \
+            "$readelf" \
+            "$machine_pattern"
+
+      - name: Upload Krita Python runtime payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-python-runtime-payload-${{ matrix.abi }}
+          path: artifacts/krita-python-runtime-payload/${{ matrix.abi }}

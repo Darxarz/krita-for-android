@@ -339,6 +339,12 @@ real seed libraries вместо старого interface-only link smoke. Plugi
 - Python standard library и site-packages в APK assets или app private storage;
 - `krita-ai-diffusion` plugin files.
 
+Первый packaging слой начат: `scripts/stage-krita-python-runtime-payload.sh` и CI
+`Krita Python runtime payload Android` скачивают зелёные PyQt/Python и real-libs
+artifacts, затем раскладывают их в APK-похожую структуру `jniLibs/<abi>` +
+`assets/python/...`. Это ещё не APK и ещё без `krita-ai-diffusion`, но это проверяемый
+runtime payload для следующего слоя `PyConfig`/Android packaging.
+
 Нужно инициализировать Python на Android через modern `PyConfig`, а не через запуск
 внешнего `python` executable.
 
