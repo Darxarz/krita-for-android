@@ -345,6 +345,10 @@ artifacts, затем раскладывают их в APK-похожую стр
 `assets/python/...`. Это ещё не APK и ещё без `krita-ai-diffusion`, но это проверяемый
 runtime payload для следующего слоя `PyConfig`/Android packaging.
 
+CI `Krita Python runtime payload Android` зелёный для обеих ABI.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28485870841
+
 Нужно инициализировать Python на Android через modern `PyConfig`, а не через запуск
 внешнего `python` executable.
 
