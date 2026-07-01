@@ -860,6 +860,59 @@ public:
 
 } // namespace Ui
 ]=])
+        elseif(_ui_name STREQUAL "manager")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QGridLayout>
+#include <QLabel>
+#include <QTextBrowser>
+#include <QTreeView>
+#include <QWidget>
+
+namespace Ui {
+
+class ManagerPage
+{
+public:
+    QTreeView *pluginsList = nullptr;
+    QLabel *errorLabel = nullptr;
+    QTextBrowser *textBrowser = nullptr;
+
+    void setupUi(QWidget *parent)
+    {
+        auto *layout = new QGridLayout(parent);
+        pluginsList = new QTreeView(parent);
+        errorLabel = new QLabel(parent);
+        textBrowser = new QTextBrowser(parent);
+        layout->addWidget(errorLabel, 0, 0);
+        layout->addWidget(pluginsList, 1, 0);
+        layout->addWidget(textBrowser, 2, 0);
+    }
+};
+
+} // namespace Ui
+]=])
+        elseif(_ui_name STREQUAL "info")
+            file(WRITE "${_generated_header}" [=[
+#pragma once
+
+#include <QVBoxLayout>
+#include <QWidget>
+
+namespace Ui {
+
+class InfoPage
+{
+public:
+    void setupUi(QWidget *parent)
+    {
+        parent->setLayout(new QVBoxLayout(parent));
+    }
+};
+
+} // namespace Ui
+]=])
         else()
             if(_qt5_uic_executable)
                 execute_process(
@@ -3698,6 +3751,16 @@ public:
         return QString();
     }
 
+    QString readName() const
+    {
+        return QString();
+    }
+
+    QString readComment() const
+    {
+        return QString();
+    }
+
     template <typename Locale>
     void setLocale(const Locale &)
     {
@@ -3743,10 +3806,55 @@ public:
         return nullptr;
     }
 };
+
+#define K_PLUGIN_FACTORY_WITH_JSON(factory, jsonFile, pluginRegistrations) \
+class factory : public KPluginFactory \
+{ \
+    Q_OBJECT \
+    Q_PLUGIN_METADATA(IID "org.kde.KPluginFactory" FILE jsonFile) \
+public: \
+    explicit factory(QObject *parent = nullptr) \
+        : KPluginFactory(parent) \
+    { \
+    } \
+};
 ]=])
 file(WRITE "${_external_include_dir}/KPluginFactory" [=[
 #pragma once
 #include "kpluginfactory.h"
+]=])
+
+file(WRITE "${_external_include_dir}/kcolorscheme.h" [=[
+#pragma once
+
+#include <QBrush>
+#include <QPalette>
+#include <Qt>
+
+class KColorScheme
+{
+public:
+    enum ColorSet {
+        View
+    };
+
+    enum ForegroundRole {
+        NegativeText
+    };
+
+    explicit KColorScheme(QPalette::ColorGroup = QPalette::Active, ColorSet = View)
+    {
+    }
+
+    QBrush foreground(ForegroundRole) const
+    {
+        return QBrush(Qt::red);
+    }
+};
+]=])
+file(WRITE "${_external_include_dir}/KColorScheme" [=[
+#pragma once
+#include "kcolorscheme.h"
 ]=])
 
 file(WRITE "${_external_include_dir}/krandom.h" [=[
@@ -5703,6 +5811,7 @@ set(PYQT_SIP_NAME ${PYQT5_SIP_NAME})
 set(PYQT_SIP_TAGS ${PYQT5_SIP_TAGS})
 set(PYQT_SIP_DIR ${PYQT5_SIP_DIR})
 set(PYTHON_SITE_PACKAGES_INSTALL_DIR "lib/krita-python-libs")
+set(KRITA_PLUGIN_INSTALL_DIR "lib/kritaplugins")
 
 include_directories("${PYTHON_INCLUDE_DIRS}")
 
@@ -5721,5 +5830,25 @@ if(TARGET python_module_PyKrita_krita)
             "${CMAKE_CURRENT_BINARY_DIR}"
             "${_external_include_dir}")
     target_link_options(python_module_PyKrita_krita PRIVATE
+        -Wl,-z,max-page-size=16384)
+endif()
+
+add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/plugin" "${CMAKE_CURRENT_BINARY_DIR}/pykrita-plugin")
+
+foreach(_pykrita_plugin_target IN ITEMS pykrita kritapykrita)
+    if(TARGET ${_pykrita_plugin_target})
+        target_include_directories(${_pykrita_plugin_target}
+            PRIVATE
+                "${PYTHON_INCLUDE_DIRS}"
+                "${KRITA_SOURCE_DIR}"
+                "${CMAKE_CURRENT_BINARY_DIR}"
+                "${_external_include_dir}")
+        target_compile_options(${_pykrita_plugin_target} PRIVATE
+            -fno-operator-names)
+    endif()
+endforeach()
+
+if(TARGET kritapykrita)
+    target_link_options(kritapykrita PRIVATE
         -Wl,-z,max-page-size=16384)
 endif()

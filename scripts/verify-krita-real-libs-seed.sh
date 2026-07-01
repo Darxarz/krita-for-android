@@ -40,12 +40,13 @@ declare -A library_names=(
     [ui]="libkritaui.so"
     [libkis]="libkritalibkis.so"
     [pykrita]="krita.so"
+    [kritapykrita]="libkritapykrita.so"
 )
 
 ordered_libraries=(
     version global plugin multiarch color store resources widgetutils command
     pigment metadata flake resourcewidgets widgets psdutils image brush impex
-    ui libkis pykrita
+    ui libkis pykrita kritapykrita
 )
 
 declare -A library_paths=()
@@ -246,3 +247,12 @@ check_deps pykrita \
     "$qt_widgets" \
     "$qt_xml"
 check_symbol pykrita "PyInit_krita"
+
+check_deps kritapykrita \
+    "$python_library" \
+    libkritalibkis.so \
+    libkritaui.so \
+    "$qt_core" \
+    "$qt_gui" \
+    "$qt_widgets"
+check_symbol kritapykrita "KritaPyQtPlugin"

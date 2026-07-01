@@ -321,9 +321,12 @@ NEEDED-зависимости и ключевые exported symbols.
 - `kritaimpex`: https://github.com/Darxarz/krita-for-android/actions/runs/28325491346
 - `kritaui`: https://github.com/Darxarz/krita-for-android/actions/runs/28479640404
 - `kritalibkis`: https://github.com/Darxarz/krita-for-android/actions/runs/28481920223
+- `PyKrita.krita`: https://github.com/Darxarz/krita-for-android/actions/runs/28483079006
 
-Следующий слой начат: собрать настоящий Android `PyKrita.krita` (`krita.so`) против
-уже зелёных real seed libraries вместо старого interface-only link smoke.
+Настоящий Android `PyKrita.krita` (`krita.so`) теперь собирается против уже зелёных
+real seed libraries вместо старого interface-only link smoke. Следующий слой начат:
+собрать plugin wrapper `kritapykrita`, который инициализирует embedded Python plugin
+manager внутри Krita.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 

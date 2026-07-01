@@ -222,6 +222,7 @@ jobs:
             kritaui \
             kritalibkis \
             python_module_PyKrita_krita \
+            kritapykrita \
             --verbose
 
           bash scripts/verify-krita-real-libs-seed.sh \
