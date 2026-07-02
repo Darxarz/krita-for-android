@@ -393,6 +393,11 @@ native load, ни copy assets, ни PyConfig. UI показывает title `Kri
 Toast и немедленное изменение текста нажатой кнопки до запуска фоновой задачи. Это
 отделяет проблему обработки touch/UI events от зависания native/runtime шага.
 
+После теста v4 UI click path работает, но native load доходит до сообщений загрузки
+библиотек и зависает без `OK`/`FAILED`. `Krita Probe Manual v5` разделяет native loading
+на кнопки `libpython`, init-probe и launcher, а также пишет `Loaded ... OK` после
+каждого успешного `System.load`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

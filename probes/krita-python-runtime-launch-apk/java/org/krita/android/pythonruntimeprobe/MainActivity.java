@@ -23,12 +23,14 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v4";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v5";
 
     private static native String runInitProbe(String runtimeRoot);
 
     private TextView statusView;
-    private volatile boolean nativeLibrariesLoaded;
+    private volatile boolean pythonLibraryLoaded;
+    private volatile boolean initProbeLibraryLoaded;
+    private volatile boolean launcherLibraryLoaded;
     private volatile boolean taskRunning;
     private long lastProgressUpdateMs;
     private int uiClickCount;
@@ -59,11 +61,31 @@ public final class MainActivity extends Activity {
 
         root.addView(makeUiTestButton());
 
-        root.addView(makeButton("1. Load native libraries", new Task() {
+        root.addView(makeButton("1a. Load libpython only", new Task() {
             @Override
             public void run() {
-                loadNativeLibrariesIfNeeded();
-                showStep("Native libraries loaded.");
+                loadPythonLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1b. Load init probe", new Task() {
+            @Override
+            public void run() {
+                loadInitProbeLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1c. Load launcher", new Task() {
+            @Override
+            public void run() {
+                loadLauncherLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1. Load all native libraries", new Task() {
+            @Override
+            public void run() {
+                loadAllNativeLibrariesIfNeeded();
             }
         }));
 
@@ -199,21 +221,62 @@ public final class MainActivity extends Activity {
     }
 
     private synchronized void loadNativeLibrariesIfNeeded() {
-        if (nativeLibrariesLoaded) {
-            showStep("Native libraries already loaded.");
+        loadAllNativeLibrariesIfNeeded();
+    }
+
+    private synchronized void loadAllNativeLibrariesIfNeeded() {
+        loadPythonLibraryIfNeeded();
+        loadInitProbeLibraryIfNeeded();
+        loadLauncherLibraryIfNeeded();
+        showStep("All native libraries loaded OK.");
+    }
+
+    private synchronized void loadPythonLibraryIfNeeded() {
+        if (pythonLibraryLoaded) {
+            showStep("libpython3.14.so already loaded.");
             return;
         }
 
         loadNativeLibrary("libpython3.14.so");
+        pythonLibraryLoaded = true;
+    }
+
+    private synchronized void loadInitProbeLibraryIfNeeded() {
+        loadPythonLibraryIfNeeded();
+        if (initProbeLibraryLoaded) {
+            showStep("libkrita_python_runtime_init_probe.so already loaded.");
+            return;
+        }
+
         loadNativeLibrary("libkrita_python_runtime_init_probe.so");
+        initProbeLibraryLoaded = true;
+    }
+
+    private synchronized void loadLauncherLibraryIfNeeded() {
+        loadInitProbeLibraryIfNeeded();
+        if (launcherLibraryLoaded) {
+            showStep("libkrita_python_runtime_launcher.so already loaded.");
+            return;
+        }
+
         loadNativeLibrary("libkrita_python_runtime_launcher.so");
-        nativeLibrariesLoaded = true;
+        launcherLibraryLoaded = true;
     }
 
     private void loadNativeLibrary(String fileName) {
         File library = new File(getApplicationInfo().nativeLibraryDir, fileName);
         showStep("Loading " + fileName + "\n" + library.getAbsolutePath());
+        sleepBeforeNativeLoad();
         System.load(library.getAbsolutePath());
+        showStep("Loaded " + fileName + " OK.");
+    }
+
+    private void sleepBeforeNativeLoad() {
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void copyPayloadIfNeeded(boolean force) throws IOException {
