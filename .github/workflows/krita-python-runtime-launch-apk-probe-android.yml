@@ -140,6 +140,7 @@ jobs:
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportOneProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildImportOneProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPyKritaProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPathProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
 
       - name: Package launchable APK probe
         run: |

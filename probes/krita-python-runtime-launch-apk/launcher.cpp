@@ -31,6 +31,7 @@ enum class ChildProbeMode
 {
     ImportOne,
     DlopenPyKrita,
+    DlopenPath,
 };
 
 std::string toString(JNIEnv *env, jstring value)
@@ -87,6 +88,26 @@ int dlopenPyKritaExtension(const std::string &runtimeRoot, std::string *message)
     return 0;
 }
 
+int dlopenPath(const std::string &path, std::string *message)
+{
+    dlerror();
+    void *handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+    if (!handle) {
+        const char *error = dlerror();
+        if (message) {
+            *message = "FAILED: dlopen native library\npath=" + path + "\ndlerror="
+                    + (error ? error : "unknown");
+        }
+        return -82;
+    }
+
+    dlclose(handle);
+    if (message) {
+        *message = "OK: dlopen native library\npath=" + path;
+    }
+    return 0;
+}
+
 void writeAll(int fd, const std::string &message)
 {
     const char *data = message.c_str();
@@ -123,6 +144,9 @@ int runChildBody(ChildProbeMode mode,
 {
     if (mode == ChildProbeMode::DlopenPyKrita) {
         return dlopenPyKritaExtension(runtimeRoot, message);
+    }
+    if (mode == ChildProbeMode::DlopenPath) {
+        return dlopenPath(moduleName, message);
     }
 
     char probeMessage[4096] = {};
@@ -170,9 +194,14 @@ std::string runChildProbe(ChildProbeMode mode, const std::string &runtimeRoot, c
         return "FAILED: waitpid() returned errno=" + std::to_string(errno) + "\n" + childMessage;
     }
 
-    const std::string label = mode == ChildProbeMode::DlopenPyKrita
-            ? "child dlopen PyKrita.krita"
-            : "child import " + moduleName;
+    std::string label;
+    if (mode == ChildProbeMode::DlopenPyKrita) {
+        label = "child dlopen PyKrita.krita";
+    } else if (mode == ChildProbeMode::DlopenPath) {
+        label = "child dlopen " + moduleName;
+    } else {
+        label = "child import " + moduleName;
+    }
 
     if (WIFSIGNALED(status)) {
         return "FAILED: " + label + " crashed\nsignal=" + std::to_string(WTERMSIG(status))
@@ -255,6 +284,24 @@ Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPyKritaProb
     }
 
     const std::string message = runChildProbe(ChildProbeMode::DlopenPyKrita, root, "");
+    __android_log_print(message.rfind("OK:", 0) == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,
+                        LOG_TAG,
+                        "%s",
+                        message.c_str());
+    return env->NewStringUTF(message.c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPathProbe(JNIEnv *env,
+                                                                               jclass,
+                                                                               jstring libraryPath)
+{
+    const std::string path = toString(env, libraryPath);
+    if (path.empty()) {
+        return env->NewStringUTF("FAILED: native library path is empty");
+    }
+
+    const std::string message = runChildProbe(ChildProbeMode::DlopenPath, "", path);
     __android_log_print(message.rfind("OK:", 0) == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,
                         LOG_TAG,
                         "%s",

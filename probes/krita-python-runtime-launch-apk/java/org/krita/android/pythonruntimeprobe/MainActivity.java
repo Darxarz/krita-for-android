@@ -3,6 +3,7 @@ package org.krita.android.pythonruntimeprobe;
 import android.app.Activity;
 import android.content.res.AssetManager;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -23,13 +24,14 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v9";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v10";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
     private static native String runImportOneProbe(String runtimeRoot, String moduleName);
     private static native String runChildImportOneProbe(String runtimeRoot, String moduleName);
     private static native String runChildDlopenPyKritaProbe(String runtimeRoot);
+    private static native String runChildDlopenPathProbe(String libraryPath);
 
     private TextView statusView;
     private TextView logView;
@@ -118,6 +120,13 @@ public final class MainActivity extends Activity {
         root.addView(makeChildImportOneButton("4b1. Child import PyQt5.QtGui", "PyQt5.QtGui"));
         root.addView(makeChildImportOneButton("4b2. Child import PyQt5.QtWidgets", "PyQt5.QtWidgets"));
         root.addView(makeChildImportOneButton("4b3. Child import PyQt5.QtXml", "PyQt5.QtXml"));
+        root.addView(makeChildDlopenNativeButton("4b4. Child dlopen QtWidgets", qtLibraryName("Widgets")));
+        root.addView(makeChildDlopenNativeButton("4b5. Child dlopen QtXml", qtLibraryName("Xml")));
+        root.addView(makeChildDlopenNativeButton("4c0a. Child dlopen libkritalibbrush", "libkritalibbrush.so"));
+        root.addView(makeChildDlopenNativeButton("4c0b. Child dlopen libkritaimage", "libkritaimage.so"));
+        root.addView(makeChildDlopenNativeButton("4c0c. Child dlopen libkritaui", "libkritaui.so"));
+        root.addView(makeChildDlopenNativeButton("4c0d. Child dlopen libkritalibkis", "libkritalibkis.so"));
+        root.addView(makeChildDlopenNativeButton("4c0e. Child dlopen libkritapykrita", "libkritapykrita.so"));
         root.addView(makeChildDlopenPyKritaButton());
         root.addView(makeChildImportOneButton("4c1. Child import PyKrita.krita", "PyKrita.krita"));
         root.addView(makeImportOneButton("4cZ. Import PyKrita.krita crash test", "PyKrita.krita"));
@@ -229,6 +238,30 @@ public final class MainActivity extends Activity {
                 showResult(runChildDlopenPyKritaProbe(runtimeRoot().getAbsolutePath()));
             }
         });
+    }
+
+    private Button makeChildDlopenNativeButton(String label, final String libraryName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                File library = new File(getApplicationInfo().nativeLibraryDir, libraryName);
+                showStep("Running child dlopen probe: " + libraryName + "\n" + library.getAbsolutePath());
+                showResult(runChildDlopenPathProbe(library.getAbsolutePath()));
+            }
+        });
+    }
+
+    private static String qtLibraryName(String moduleName) {
+        return "libQt5" + moduleName + "_" + primaryAbi() + ".so";
+    }
+
+    private static String primaryAbi() {
+        if (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0) {
+            return Build.SUPPORTED_ABIS[0];
+        }
+        return "arm64-v8a";
     }
 
     private Button makeButton(String label, final Task task) {

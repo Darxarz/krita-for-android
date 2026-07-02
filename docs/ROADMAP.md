@@ -440,6 +440,13 @@ Toast и немедленное изменение текста нажатой �
 добавляет текст Python exception для import failures и отдельный `dlopen` probe для
 native-зависимостей PyKrita.
 
+`Krita Probe Manual v10` добавляет отдельные child `dlopen` checks для
+`QtWidgets`, `QtXml`, `libkritalibbrush`, `libkritaimage`, `libkritaui`,
+`libkritalibkis` и `libkritapykrita`, а init probe возвращает `error=...` для
+Python import failures. Это должно показать, какая native dependency падает до
+`PyInit_krita`, или подтвердить, что crash находится в loader/static-init самого
+`PyKrita.krita`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
