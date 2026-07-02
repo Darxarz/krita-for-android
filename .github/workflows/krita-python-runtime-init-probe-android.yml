@@ -142,6 +142,8 @@ jobs:
 
           "$readelf" -Ws "$probe" | tee "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
           grep -q "krita_android_python_runtime_init_probe" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_init_probe_message" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_import_probe" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
 
       - name: Upload runtime init probe
         uses: actions/upload-artifact@v4

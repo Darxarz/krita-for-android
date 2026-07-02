@@ -407,6 +407,11 @@ Toast и немедленное изменение текста нажатой �
 Следующий APK packaging fix кладёт NDK `libc++_shared.so` в `lib/<abi>/` и проверяет его
 наличие в APK.
 
+Следующий runtime layer добавляет native import probe поверх уже зелёного `PyConfig`:
+он инициализирует Python из staged payload и проверяет импорты `sys`, `PyQt5.QtCore`,
+`PyKrita.krita` и built-in package `krita`. Это первый планшетный тест не только
+интерпретатора, но и реальной Python/PyQt/PyKrita import surface.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
