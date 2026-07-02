@@ -23,15 +23,18 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v5";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v6";
 
     private static native String runInitProbe(String runtimeRoot);
 
     private TextView statusView;
+    private TextView logView;
     private volatile boolean pythonLibraryLoaded;
     private volatile boolean initProbeLibraryLoaded;
     private volatile boolean launcherLibraryLoaded;
     private volatile boolean taskRunning;
+    private volatile String lastShortStatus = "not started";
+    private final StringBuilder logBuffer = new StringBuilder();
     private long lastProgressUpdateMs;
     private int uiClickCount;
 
@@ -125,6 +128,18 @@ public final class MainActivity extends Activity {
             }
         }));
 
+        logView = new TextView(this);
+        logView.setTextColor(Color.rgb(30, 30, 30));
+        logView.setBackgroundColor(Color.rgb(245, 245, 245));
+        logView.setGravity(Gravity.START | Gravity.TOP);
+        logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        logView.setPadding(16, 16, 16, 16);
+        LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        logParams.setMargins(0, 20, 0, 0);
+        root.addView(logView, logParams);
+
         scrollView.addView(root);
         setContentView(scrollView);
 
@@ -148,10 +163,9 @@ public final class MainActivity extends Activity {
                 uiClickCount++;
                 String message = SCREEN_TITLE + "\n\nUI click received: " + uiClickCount
                         + "\nNo native libraries loaded. No payload copied.";
-                statusView.setText(message);
+                showResult(message);
                 button.setText("UI click test: " + uiClickCount);
                 Toast.makeText(MainActivity.this, "UI click " + uiClickCount, Toast.LENGTH_SHORT).show();
-                Log.i(TAG, message);
             }
         });
         return button;
@@ -172,11 +186,10 @@ public final class MainActivity extends Activity {
             public void onClick(View view) {
                 String clicked = SCREEN_TITLE + "\n\nClicked: " + label
                         + "\nTask will start in 750 ms.";
-                statusView.setText(clicked);
+                showResult(clicked);
                 button.setText(label + "\nRUNNING...");
                 button.setEnabled(false);
                 Toast.makeText(MainActivity.this, "Clicked: " + label, Toast.LENGTH_SHORT).show();
-                Log.i(TAG, clicked);
 
                 button.postDelayed(new Runnable() {
                     @Override
@@ -201,9 +214,11 @@ public final class MainActivity extends Activity {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                final String[] failure = new String[1];
                 try {
                     task.run();
                 } catch (Throwable error) {
+                    failure[0] = error.toString();
                     Log.e(TAG, "Runtime probe task failed", error);
                     showResult("FAILED: " + error);
                 } finally {
@@ -211,7 +226,11 @@ public final class MainActivity extends Activity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            button.setText(label);
+                            if (failure[0] == null) {
+                                button.setText(label + "\nDONE: " + lastShortStatus);
+                            } else {
+                                button.setText(label + "\nFAILED: " + shorten(failure[0]));
+                            }
                             button.setEnabled(true);
                         }
                     });
@@ -324,13 +343,46 @@ public final class MainActivity extends Activity {
     }
 
     private void showResult(final String message) {
+        lastShortStatus = shorten(stripScreenTitle(message));
         Log.i(TAG, message);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 statusView.setText(message);
+                appendLogLine(lastShortStatus);
             }
         });
+    }
+
+    private void appendLogLine(String line) {
+        if (logView == null) {
+            return;
+        }
+
+        logBuffer.append(line).append('\n');
+        while (logBuffer.length() > 3000) {
+            int newline = logBuffer.indexOf("\n");
+            if (newline < 0) {
+                logBuffer.setLength(0);
+                break;
+            }
+            logBuffer.delete(0, newline + 1);
+        }
+
+        logView.setText("Persistent log:\n" + logBuffer);
+    }
+
+    private static String stripScreenTitle(String message) {
+        if (message.startsWith(SCREEN_TITLE)) {
+            String stripped = message.substring(SCREEN_TITLE.length()).trim();
+            return stripped.length() == 0 ? message : stripped;
+        }
+        return message;
+    }
+
+    private static String shorten(String value) {
+        String normalized = value.replace('\n', ' ').replace('\r', ' ').trim();
+        return normalized.length() <= 90 ? normalized : normalized.substring(0, 87) + "...";
     }
 
     private void showCopyProgress(String assetPath, CopyStats stats) {
