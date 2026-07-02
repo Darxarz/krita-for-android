@@ -420,6 +420,11 @@ Toast и немедленное изменение текста нажатой �
 Следующий слой добавляет native `import_one` probe, чтобы проверять `sys`,
 `PyQt5.QtCore`, `PyKrita.krita` и `krita` отдельными кнопками и локализовать crash.
 
+`Krita Probe Manual v8` выводит отдельные кнопки `4a. Import sys`,
+`4b. Import PyQt5.QtCore`, `4c. Import PyKrita.krita` и `4d. Import krita`.
+Кнопка combined import сохранена как `4z`, а setup sequence больше не запускает
+опасный combined import автоматически.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

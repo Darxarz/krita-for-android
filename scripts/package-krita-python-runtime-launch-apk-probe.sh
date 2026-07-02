@@ -78,12 +78,12 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
-        android:label="Krita Probe Manual v7"
+        android:label="Krita Probe Manual v8"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Krita Probe Manual v7">
+            android:label="Krita Probe Manual v8">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

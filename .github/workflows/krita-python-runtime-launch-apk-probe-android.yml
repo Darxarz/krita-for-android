@@ -137,6 +137,7 @@ jobs:
           "$readelf" -Ws "$launcher" | tee "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runInitProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportOneProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
 
       - name: Package launchable APK probe
         run: |

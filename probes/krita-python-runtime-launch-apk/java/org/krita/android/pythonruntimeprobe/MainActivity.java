@@ -23,10 +23,11 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v7";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v8";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
+    private static native String runImportOneProbe(String runtimeRoot, String moduleName);
 
     private TextView statusView;
     private TextView logView;
@@ -110,25 +111,28 @@ public final class MainActivity extends Activity {
             }
         }));
 
-        root.addView(makeButton("4. Import Python modules", new Task() {
+        root.addView(makeImportOneButton("4a. Import sys", "sys"));
+        root.addView(makeImportOneButton("4b. Import PyQt5.QtCore", "PyQt5.QtCore"));
+        root.addView(makeImportOneButton("4c. Import PyKrita.krita", "PyKrita.krita"));
+        root.addView(makeImportOneButton("4d. Import krita", "krita"));
+
+        root.addView(makeButton("4z. Import all Python modules", new Task() {
             @Override
             public void run() throws IOException {
                 loadNativeLibrariesIfNeeded();
                 requirePayload();
-                showStep("Running Python import probe...");
+                showStep("Running combined Python import probe...");
                 showResult(runImportProbe(runtimeRoot().getAbsolutePath()));
             }
         }));
 
-        root.addView(makeButton("Run full sequence", new Task() {
+        root.addView(makeButton("Run setup sequence", new Task() {
             @Override
             public void run() throws IOException {
                 loadNativeLibrariesIfNeeded();
                 copyPayloadIfNeeded(false);
                 showStep("Running PyConfig init probe...");
                 showResult(runInitProbe(runtimeRoot().getAbsolutePath()));
-                showStep("Running Python import probe...");
-                showResult(runImportProbe(runtimeRoot().getAbsolutePath()));
             }
         }));
 
@@ -182,6 +186,18 @@ public final class MainActivity extends Activity {
             }
         });
         return button;
+    }
+
+    private Button makeImportOneButton(String label, final String moduleName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running single import probe: " + moduleName);
+                showResult(runImportOneProbe(runtimeRoot().getAbsolutePath(), moduleName));
+            }
+        });
     }
 
     private Button makeButton(String label, final Task task) {

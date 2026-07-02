@@ -12,6 +12,10 @@ extern "C" int krita_android_python_runtime_init_probe_message(const char *runti
 extern "C" int krita_android_python_runtime_import_probe(const char *runtimeRoot,
                                                          char *messageBuffer,
                                                          int messageBufferSize);
+extern "C" int krita_android_python_runtime_import_one_probe(const char *runtimeRoot,
+                                                             const char *moduleName,
+                                                             char *messageBuffer,
+                                                             int messageBufferSize);
 
 namespace
 {
@@ -84,6 +88,46 @@ Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportProbe(JNIEnv *en
                   result == 0 ? "OK" : "FAILED",
                   result,
                   probeMessage,
+                  root.c_str());
+
+    __android_log_print(result == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,
+                        LOG_TAG,
+                        "%s",
+                        message);
+
+    return env->NewStringUTF(message);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportOneProbe(JNIEnv *env,
+                                                                         jclass,
+                                                                         jstring runtimeRoot,
+                                                                         jstring moduleName)
+{
+    const std::string root = toString(env, runtimeRoot);
+    if (root.empty()) {
+        return env->NewStringUTF("FAILED: runtime root is empty");
+    }
+
+    const std::string module = toString(env, moduleName);
+    if (module.empty()) {
+        return env->NewStringUTF("FAILED: module name is empty");
+    }
+
+    char probeMessage[4096] = {};
+    const int result = krita_android_python_runtime_import_one_probe(root.c_str(),
+                                                                     module.c_str(),
+                                                                     probeMessage,
+                                                                     static_cast<int>(sizeof(probeMessage)));
+
+    char message[4608];
+    std::snprintf(message,
+                  sizeof(message),
+                  "%s: Python import-one probe returned %d\n%s\nmodule=%s\nroot=%s",
+                  result == 0 ? "OK" : "FAILED",
+                  result,
+                  probeMessage,
+                  module.c_str(),
                   root.c_str());
 
     __android_log_print(result == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,
