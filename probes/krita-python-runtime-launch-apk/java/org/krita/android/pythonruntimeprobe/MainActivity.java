@@ -13,6 +13,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -22,7 +23,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v3";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v4";
 
     private static native String runInitProbe(String runtimeRoot);
 
@@ -30,6 +31,7 @@ public final class MainActivity extends Activity {
     private volatile boolean nativeLibrariesLoaded;
     private volatile boolean taskRunning;
     private long lastProgressUpdateMs;
+    private int uiClickCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +56,8 @@ public final class MainActivity extends Activity {
         root.addView(statusView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        root.addView(makeUiTestButton());
 
         root.addView(makeButton("1. Load native libraries", new Task() {
             @Override
@@ -103,11 +107,36 @@ public final class MainActivity extends Activity {
         setContentView(scrollView);
 
         showStep("Idle. No heavy task is running.\n\n"
-                + "Use the buttons one by one. If this text is visible, Activity.onCreate() works.");
+                + "First press 'UI click test'. It does not load Python or copy files.");
+    }
+
+    private Button makeUiTestButton() {
+        final Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText("UI click test");
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 12, 0, 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                uiClickCount++;
+                String message = SCREEN_TITLE + "\n\nUI click received: " + uiClickCount
+                        + "\nNo native libraries loaded. No payload copied.";
+                statusView.setText(message);
+                button.setText("UI click test: " + uiClickCount);
+                Toast.makeText(MainActivity.this, "UI click " + uiClickCount, Toast.LENGTH_SHORT).show();
+                Log.i(TAG, message);
+            }
+        });
+        return button;
     }
 
     private Button makeButton(String label, final Task task) {
-        Button button = new Button(this);
+        final Button button = new Button(this);
         button.setAllCaps(false);
         button.setText(label);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -119,15 +148,30 @@ public final class MainActivity extends Activity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startTask(task);
+                String clicked = SCREEN_TITLE + "\n\nClicked: " + label
+                        + "\nTask will start in 750 ms.";
+                statusView.setText(clicked);
+                button.setText(label + "\nRUNNING...");
+                button.setEnabled(false);
+                Toast.makeText(MainActivity.this, "Clicked: " + label, Toast.LENGTH_SHORT).show();
+                Log.i(TAG, clicked);
+
+                button.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        startTask(label, task, button);
+                    }
+                }, 750);
             }
         });
         return button;
     }
 
-    private void startTask(final Task task) {
+    private void startTask(final String label, final Task task, final Button button) {
         if (taskRunning) {
             showStep("A task is already running. Wait for it to finish.");
+            button.setText(label);
+            button.setEnabled(true);
             return;
         }
 
@@ -142,6 +186,13 @@ public final class MainActivity extends Activity {
                     showResult("FAILED: " + error);
                 } finally {
                     taskRunning = false;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            button.setText(label);
+                            button.setEnabled(true);
+                        }
+                    });
                 }
             }
         }, "krita-python-runtime-probe").start();

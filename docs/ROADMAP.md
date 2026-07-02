@@ -389,6 +389,10 @@ diagnostic layer переводит APK в manual mode: старт Activity бо
 native load, ни copy assets, ни PyConfig. UI показывает title `Krita Probe Manual v3` и
 кнопки для запуска каждого шага отдельно.
 
+Следующий diagnostic layer `Krita Probe Manual v4` добавляет кнопку `UI click test`,
+Toast и немедленное изменение текста нажатой кнопки до запуска фоновой задачи. Это
+отделяет проблему обработки touch/UI events от зависания native/runtime шага.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
