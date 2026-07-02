@@ -234,6 +234,53 @@ int importPythonModulesFromPayload(const char *runtimeRoot, std::string *message
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Python import probe completed");
     return 0;
 }
+
+int importOnePythonModuleFromPayload(const char *runtimeRoot, const char *moduleName, std::string *message)
+{
+    if (!moduleName || !moduleName[0]) {
+        if (message) {
+            *message = "FAILED: empty module name";
+        }
+        return -50;
+    }
+
+    const RuntimePaths paths = makeRuntimePaths(runtimeRoot);
+
+    const int initResult = initializePythonWithPaths(paths);
+    if (initResult != 0) {
+        if (message) {
+            *message = "FAILED: Py_InitializeFromConfig returned " + std::to_string(initResult);
+        }
+        return initResult;
+    }
+
+    PyObject *module = PyImport_ImportModule(moduleName);
+    if (!module) {
+        PyErr_Print();
+        Py_FinalizeEx();
+        if (message) {
+            *message = "FAILED: import " + std::string(moduleName);
+        }
+        return -51;
+    }
+
+    Py_DECREF(module);
+
+    const int finalizeResult = Py_FinalizeEx();
+    if (finalizeResult != 0) {
+        if (message) {
+            *message = "FAILED: Py_FinalizeEx returned " + std::to_string(finalizeResult);
+        }
+        return -52;
+    }
+
+    if (message) {
+        *message = "OK: import " + std::string(moduleName);
+    }
+
+    __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Python single import probe completed for %s", moduleName);
+    return 0;
+}
 } // namespace
 
 extern "C" __attribute__((visibility("default"))) int krita_android_python_runtime_init_probe(const char *runtimeRoot)
@@ -255,6 +302,15 @@ extern "C" __attribute__((visibility("default"))) int krita_android_python_runti
 {
     std::string message;
     const int result = importPythonModulesFromPayload(runtimeRoot, &message);
+    copyMessage(message, messageBuffer, messageBufferSize);
+    return result;
+}
+
+extern "C" __attribute__((visibility("default"))) int krita_android_python_runtime_import_one_probe(
+    const char *runtimeRoot, const char *moduleName, char *messageBuffer, int messageBufferSize)
+{
+    std::string message;
+    const int result = importOnePythonModuleFromPayload(runtimeRoot, moduleName, &message);
     copyMessage(message, messageBuffer, messageBufferSize);
     return result;
 }

@@ -416,6 +416,10 @@ Toast и немедленное изменение текста нажатой �
 `4. Import Python modules` и возвращает на экран список успешных импортов или первый
 упавший module name.
 
+Планшетный тест v7 показал native crash/закрытие приложения при combined import probe.
+Следующий слой добавляет native `import_one` probe, чтобы проверять `sys`,
+`PyQt5.QtCore`, `PyKrita.krita` и `krita` отдельными кнопками и локализовать crash.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
