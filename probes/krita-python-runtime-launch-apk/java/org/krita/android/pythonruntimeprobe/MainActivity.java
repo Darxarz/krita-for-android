@@ -23,9 +23,10 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v6";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v7";
 
     private static native String runInitProbe(String runtimeRoot);
+    private static native String runImportProbe(String runtimeRoot);
 
     private TextView statusView;
     private TextView logView;
@@ -109,6 +110,16 @@ public final class MainActivity extends Activity {
             }
         }));
 
+        root.addView(makeButton("4. Import Python modules", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running Python import probe...");
+                showResult(runImportProbe(runtimeRoot().getAbsolutePath()));
+            }
+        }));
+
         root.addView(makeButton("Run full sequence", new Task() {
             @Override
             public void run() throws IOException {
@@ -116,6 +127,8 @@ public final class MainActivity extends Activity {
                 copyPayloadIfNeeded(false);
                 showStep("Running PyConfig init probe...");
                 showResult(runInitProbe(runtimeRoot().getAbsolutePath()));
+                showStep("Running Python import probe...");
+                showResult(runImportProbe(runtimeRoot().getAbsolutePath()));
             }
         }));
 

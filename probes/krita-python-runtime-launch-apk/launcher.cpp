@@ -6,6 +6,12 @@
 #include <string>
 
 extern "C" int krita_android_python_runtime_init_probe(const char *runtimeRoot);
+extern "C" int krita_android_python_runtime_init_probe_message(const char *runtimeRoot,
+                                                               char *messageBuffer,
+                                                               int messageBufferSize);
+extern "C" int krita_android_python_runtime_import_probe(const char *runtimeRoot,
+                                                         char *messageBuffer,
+                                                         int messageBufferSize);
 
 namespace
 {
@@ -36,14 +42,48 @@ Java_org_krita_android_pythonruntimeprobe_MainActivity_runInitProbe(JNIEnv *env,
         return env->NewStringUTF("FAILED: runtime root is empty");
     }
 
-    const int result = krita_android_python_runtime_init_probe(root.c_str());
+    char probeMessage[4096] = {};
+    const int result = krita_android_python_runtime_init_probe_message(root.c_str(),
+                                                                       probeMessage,
+                                                                       static_cast<int>(sizeof(probeMessage)));
 
-    char message[256];
+    char message[4608];
     std::snprintf(message,
                   sizeof(message),
-                  "%s: PyConfig init probe returned %d for %s",
+                  "%s: PyConfig init probe returned %d\n%s\nroot=%s",
                   result == 0 ? "OK" : "FAILED",
                   result,
+                  probeMessage,
+                  root.c_str());
+
+    __android_log_print(result == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,
+                        LOG_TAG,
+                        "%s",
+                        message);
+
+    return env->NewStringUTF(message);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportProbe(JNIEnv *env, jclass, jstring runtimeRoot)
+{
+    const std::string root = toString(env, runtimeRoot);
+    if (root.empty()) {
+        return env->NewStringUTF("FAILED: runtime root is empty");
+    }
+
+    char probeMessage[4096] = {};
+    const int result = krita_android_python_runtime_import_probe(root.c_str(),
+                                                                 probeMessage,
+                                                                 static_cast<int>(sizeof(probeMessage)));
+
+    char message[4608];
+    std::snprintf(message,
+                  sizeof(message),
+                  "%s: Python import probe returned %d\n%s\nroot=%s",
+                  result == 0 ? "OK" : "FAILED",
+                  result,
+                  probeMessage,
                   root.c_str());
 
     __android_log_print(result == 0 ? ANDROID_LOG_INFO : ANDROID_LOG_ERROR,

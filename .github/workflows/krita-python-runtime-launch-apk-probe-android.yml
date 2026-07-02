@@ -136,6 +136,7 @@ jobs:
           grep -Fq "Shared library: [libkrita_python_runtime_init_probe.so]" "$RUNNER_TEMP/krita-python-runtime-launcher-dynamic.txt"
           "$readelf" -Ws "$launcher" | tee "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
           grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runInitProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
 
       - name: Package launchable APK probe
         run: |

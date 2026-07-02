@@ -412,6 +412,10 @@ Toast и немедленное изменение текста нажатой �
 `PyKrita.krita` и built-in package `krita`. Это первый планшетный тест не только
 интерпретатора, но и реальной Python/PyQt/PyKrita import surface.
 
+`Krita Probe Manual v7` подключает этот import probe к launch APK кнопкой
+`4. Import Python modules` и возвращает на экран список успешных импортов или первый
+упавший module name.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
