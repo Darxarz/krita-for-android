@@ -23,11 +23,13 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v8";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v9";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
     private static native String runImportOneProbe(String runtimeRoot, String moduleName);
+    private static native String runChildImportOneProbe(String runtimeRoot, String moduleName);
+    private static native String runChildDlopenPyKritaProbe(String runtimeRoot);
 
     private TextView statusView;
     private TextView logView;
@@ -113,10 +115,15 @@ public final class MainActivity extends Activity {
 
         root.addView(makeImportOneButton("4a. Import sys", "sys"));
         root.addView(makeImportOneButton("4b. Import PyQt5.QtCore", "PyQt5.QtCore"));
-        root.addView(makeImportOneButton("4c. Import PyKrita.krita", "PyKrita.krita"));
+        root.addView(makeChildImportOneButton("4b1. Child import PyQt5.QtGui", "PyQt5.QtGui"));
+        root.addView(makeChildImportOneButton("4b2. Child import PyQt5.QtWidgets", "PyQt5.QtWidgets"));
+        root.addView(makeChildImportOneButton("4b3. Child import PyQt5.QtXml", "PyQt5.QtXml"));
+        root.addView(makeChildDlopenPyKritaButton());
+        root.addView(makeChildImportOneButton("4c1. Child import PyKrita.krita", "PyKrita.krita"));
+        root.addView(makeImportOneButton("4cZ. Import PyKrita.krita crash test", "PyKrita.krita"));
         root.addView(makeImportOneButton("4d. Import krita", "krita"));
 
-        root.addView(makeButton("4z. Import all Python modules", new Task() {
+        root.addView(makeButton("4z. Import all Python modules crash test", new Task() {
             @Override
             public void run() throws IOException {
                 loadNativeLibrariesIfNeeded();
@@ -196,6 +203,30 @@ public final class MainActivity extends Activity {
                 requirePayload();
                 showStep("Running single import probe: " + moduleName);
                 showResult(runImportOneProbe(runtimeRoot().getAbsolutePath(), moduleName));
+            }
+        });
+    }
+
+    private Button makeChildImportOneButton(String label, final String moduleName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running child import probe: " + moduleName);
+                showResult(runChildImportOneProbe(runtimeRoot().getAbsolutePath(), moduleName));
+            }
+        });
+    }
+
+    private Button makeChildDlopenPyKritaButton() {
+        return makeButton("4c0. Child dlopen PyKrita.krita", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running child dlopen probe: PyKrita.krita");
+                showResult(runChildDlopenPyKritaProbe(runtimeRoot().getAbsolutePath()));
             }
         });
     }

@@ -425,6 +425,15 @@ Toast и немедленное изменение текста нажатой �
 Кнопка combined import сохранена как `4z`, а setup sequence больше не запускает
 опасный combined import автоматически.
 
+Планшетный тест v8: `sys` и `PyQt5.QtCore` импортируются успешно; `PyKrita.krita`
+и combined import закрывают процесс; `krita` возвращает обычный Python import failure
+без native crash. Это локализует падение в PyKrita native extension layer.
+
+`Krita Probe Manual v9` добавляет child-process probes для рискованных импортов:
+`PyQt5.QtGui`, `PyQt5.QtWidgets`, `PyQt5.QtXml`, `dlopen PyKrita.krita` и
+`import PyKrita.krita`. Если child падает, основной UI должен остаться живым и
+показать сигнал падения, что отделяет ELF/dlopen проблему от `PyInit_krita`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

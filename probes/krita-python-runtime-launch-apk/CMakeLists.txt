@@ -17,6 +17,7 @@ add_library(krita_python_runtime_launcher SHARED
 
 target_link_libraries(krita_python_runtime_launcher PRIVATE
     krita_python_runtime_init_probe
+    dl
     log)
 
 target_link_options(krita_python_runtime_launcher PRIVATE
