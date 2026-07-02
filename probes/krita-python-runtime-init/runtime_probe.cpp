@@ -81,6 +81,33 @@ std::string pythonObjectToUtf8(PyObject *object)
     return result;
 }
 
+std::string takePythonExceptionText()
+{
+    PyObject *type = nullptr;
+    PyObject *value = nullptr;
+    PyObject *traceback = nullptr;
+    PyErr_Fetch(&type, &value, &traceback);
+    PyErr_NormalizeException(&type, &value, &traceback);
+
+    const std::string typeText = pythonObjectToUtf8(type);
+    const std::string valueText = pythonObjectToUtf8(value);
+
+    Py_XDECREF(type);
+    Py_XDECREF(value);
+    Py_XDECREF(traceback);
+
+    if (!typeText.empty() && !valueText.empty()) {
+        return typeText + ": " + valueText;
+    }
+    if (!typeText.empty()) {
+        return typeText;
+    }
+    if (!valueText.empty()) {
+        return valueText;
+    }
+    return "unknown Python exception";
+}
+
 int initializePythonWithPaths(const RuntimePaths &paths)
 {
     PyConfig config;
@@ -141,10 +168,10 @@ int initializePythonFromPayload(const char *runtimeRoot, std::string *message)
 
     PyObject *sysModule = PyImport_ImportModule("sys");
     if (!sysModule) {
-        PyErr_Print();
+        const std::string errorText = takePythonExceptionText();
         Py_FinalizeEx();
         if (message) {
-            *message = "FAILED: import sys";
+            *message = "FAILED: import sys\nerror=" + errorText;
         }
         return -11;
     }
@@ -193,10 +220,10 @@ int importPythonModulesFromPayload(const char *runtimeRoot, std::string *message
     for (const char *moduleName : modules) {
         PyObject *module = PyImport_ImportModule(moduleName);
         if (!module) {
-            PyErr_Print();
+            const std::string errorText = takePythonExceptionText();
             Py_FinalizeEx();
             if (message) {
-                *message = "FAILED: import " + std::string(moduleName);
+                *message = "FAILED: import " + std::string(moduleName) + "\nerror=" + errorText;
             }
             return -30 - index;
         }
@@ -256,10 +283,10 @@ int importOnePythonModuleFromPayload(const char *runtimeRoot, const char *module
 
     PyObject *module = PyImport_ImportModule(moduleName);
     if (!module) {
-        PyErr_Print();
+        const std::string errorText = takePythonExceptionText();
         Py_FinalizeEx();
         if (message) {
-            *message = "FAILED: import " + std::string(moduleName);
+            *message = "FAILED: import " + std::string(moduleName) + "\nerror=" + errorText;
         }
         return -51;
     }

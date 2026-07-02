@@ -434,6 +434,12 @@ Toast и немедленное изменение текста нажатой �
 `import PyKrita.krita`. Если child падает, основной UI должен остаться живым и
 показать сигнал падения, что отделяет ELF/dlopen проблему от `PyInit_krita`.
 
+Планшетный тест v9: `PyQt5.QtGui` импортируется успешно; `PyQt5.QtWidgets` и
+`PyQt5.QtXml` возвращают Python import failure; `dlopen PyKrita.krita` и
+`import PyKrita.krita` падают в child process с `signal=11`. Следующий слой
+добавляет текст Python exception для import failures и отдельный `dlopen` probe для
+native-зависимостей PyKrita.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
