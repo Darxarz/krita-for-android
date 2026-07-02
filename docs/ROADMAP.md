@@ -384,6 +384,11 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486651957
 initializer до отрисовки UI; Activity показывает крупные screen/logcat breadcrumbs для
 `libpython`, init-probe, launcher, copy assets и `PyConfig` stage.
 
+После повторного теста белый экран оставался и планшет грелся около 10 минут. Следующий
+diagnostic layer переводит APK в manual mode: старт Activity больше не запускает ни
+native load, ни copy assets, ни PyConfig. UI показывает title `Krita Probe Manual v3` и
+кнопки для запуска каждого шага отдельно.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
