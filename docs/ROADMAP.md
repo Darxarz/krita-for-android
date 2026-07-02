@@ -402,6 +402,11 @@ Toast и немедленное изменение текста нажатой �
 теряются в верхнем status area. `Krita Probe Manual v6` оставляет итог прямо на кнопке
 (`DONE`/`FAILED`/`RUNNING`) и добавляет постоянный лог внизу экрана.
 
+Планшетный тест v6 показал, что `libpython3.14.so` загружается, payload копируется, но
+`init probe` и `launcher` падают на Android linker error: `libc++_shared.so` not found.
+Следующий APK packaging fix кладёт NDK `libc++_shared.so` в `lib/<abi>/` и проверяет его
+наличие в APK.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 8 ]; then
-    echo "usage: $0 <abi> <payload-dir> <init-probe-so> <output-dir> <android-jar> <build-tools-dir> <readelf> <machine-pattern>" >&2
+if [ "$#" -ne 9 ]; then
+    echo "usage: $0 <abi> <payload-dir> <init-probe-so> <cxx-shared-so> <output-dir> <android-jar> <build-tools-dir> <readelf> <machine-pattern>" >&2
     exit 2
 fi
 
 abi="$1"
 payload_dir="$2"
 init_probe_so="$3"
-output_dir="$4"
-android_jar="$5"
-build_tools_dir="$6"
-readelf_bin="$7"
-machine_pattern="$8"
+cxx_shared_so="$4"
+output_dir="$5"
+android_jar="$6"
+build_tools_dir="$7"
+readelf_bin="$8"
+machine_pattern="$9"
 
 test -d "$payload_dir/jniLibs/$abi"
 test -d "$payload_dir/assets/python"
 test -f "$init_probe_so"
+test -f "$cxx_shared_so"
 test -f "$android_jar"
 test -x "$build_tools_dir/aapt2"
 test -x "$build_tools_dir/zipalign"
@@ -35,6 +37,7 @@ cp -a "$payload_dir/assets/python" "$assets_dir/"
 find "$payload_dir/jniLibs/$abi" -maxdepth 1 -type f \( -name "*.so" -o -name "*.so.*" \) \
     -exec cp -a {} "$native_lib_dir/" \;
 cp -a "$init_probe_so" "$native_lib_dir/libkrita_python_runtime_init_probe.so"
+cp -a "$cxx_shared_so" "$native_lib_dir/libc++_shared.so"
 
 test -f "$assets_dir/python/lib/python3.14/os.py"
 test -f "$assets_dir/python/lib/python3.14/site.py"
@@ -44,6 +47,7 @@ test -f "$native_lib_dir/libpython3.14.so"
 test -f "$native_lib_dir/libkritalibkis.so"
 test -f "$native_lib_dir/libkritapykrita.so"
 test -f "$native_lib_dir/libkrita_python_runtime_init_probe.so"
+test -f "$native_lib_dir/libc++_shared.so"
 
 cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -113,6 +117,7 @@ require_entry "lib/$abi/libpython3.14.so"
 require_entry "lib/$abi/libkritalibkis.so"
 require_entry "lib/$abi/libkritapykrita.so"
 require_entry "lib/$abi/libkrita_python_runtime_init_probe.so"
+require_entry "lib/$abi/libc++_shared.so"
 
 check_machine() {
     local apk_entry="$1"
@@ -127,6 +132,7 @@ check_machine "lib/$abi/libpython3.14.so"
 check_machine "lib/$abi/libkritalibkis.so"
 check_machine "lib/$abi/libkritapykrita.so"
 check_machine "lib/$abi/libkrita_python_runtime_init_probe.so"
+check_machine "lib/$abi/libc++_shared.so"
 check_machine "assets/python/krita-python-libs/PyKrita/krita.so"
 
 {

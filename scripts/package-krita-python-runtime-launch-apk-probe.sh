@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 10 ]; then
-    echo "usage: $0 <abi> <payload-dir> <init-probe-so> <launcher-so> <java-source-dir> <output-dir> <android-jar> <build-tools-dir> <readelf> <machine-pattern>" >&2
+if [ "$#" -ne 11 ]; then
+    echo "usage: $0 <abi> <payload-dir> <init-probe-so> <launcher-so> <cxx-shared-so> <java-source-dir> <output-dir> <android-jar> <build-tools-dir> <readelf> <machine-pattern>" >&2
     exit 2
 fi
 
@@ -10,17 +10,19 @@ abi="$1"
 payload_dir="$2"
 init_probe_so="$3"
 launcher_so="$4"
-java_source_dir="$5"
-output_dir="$6"
-android_jar="$7"
-build_tools_dir="$8"
-readelf_bin="$9"
-machine_pattern="${10}"
+cxx_shared_so="$5"
+java_source_dir="$6"
+output_dir="$7"
+android_jar="$8"
+build_tools_dir="$9"
+readelf_bin="${10}"
+machine_pattern="${11}"
 
 test -d "$payload_dir/jniLibs/$abi"
 test -d "$payload_dir/assets/python"
 test -f "$init_probe_so"
 test -f "$launcher_so"
+test -f "$cxx_shared_so"
 test -f "$java_source_dir/org/krita/android/pythonruntimeprobe/MainActivity.java"
 test -f "$android_jar"
 test -x "$build_tools_dir/aapt2"
@@ -43,6 +45,7 @@ find "$payload_dir/jniLibs/$abi" -maxdepth 1 -type f \( -name "*.so" -o -name "*
     -exec cp -a {} "$native_lib_dir/" \;
 cp -a "$init_probe_so" "$native_lib_dir/libkrita_python_runtime_init_probe.so"
 cp -a "$launcher_so" "$native_lib_dir/libkrita_python_runtime_launcher.so"
+cp -a "$cxx_shared_so" "$native_lib_dir/libc++_shared.so"
 
 test -f "$assets_dir/python/lib/python3.14/os.py"
 test -f "$assets_dir/python/krita-python-libs/PyKrita/krita.so"
@@ -50,6 +53,7 @@ test -f "$native_lib_dir/libpython3.14.so"
 test -f "$native_lib_dir/libkritapykrita.so"
 test -f "$native_lib_dir/libkrita_python_runtime_init_probe.so"
 test -f "$native_lib_dir/libkrita_python_runtime_launcher.so"
+test -f "$native_lib_dir/libc++_shared.so"
 
 javac -encoding UTF-8 \
     -source 8 \
@@ -143,6 +147,7 @@ require_entry "lib/$abi/libpython3.14.so"
 require_entry "lib/$abi/libkritapykrita.so"
 require_entry "lib/$abi/libkrita_python_runtime_init_probe.so"
 require_entry "lib/$abi/libkrita_python_runtime_launcher.so"
+require_entry "lib/$abi/libc++_shared.so"
 
 check_machine() {
     local apk_entry="$1"
@@ -167,8 +172,11 @@ check_machine "lib/$abi/libpython3.14.so"
 check_machine "lib/$abi/libkritapykrita.so"
 check_machine "lib/$abi/libkrita_python_runtime_init_probe.so"
 check_machine "lib/$abi/libkrita_python_runtime_launcher.so"
+check_machine "lib/$abi/libc++_shared.so"
 check_machine "assets/python/krita-python-libs/PyKrita/krita.so"
+check_dynamic_needed "lib/$abi/libkrita_python_runtime_init_probe.so" "libc++_shared.so"
 check_dynamic_needed "lib/$abi/libkrita_python_runtime_launcher.so" "libkrita_python_runtime_init_probe.so"
+check_dynamic_needed "lib/$abi/libkrita_python_runtime_launcher.so" "libc++_shared.so"
 
 {
     echo "Krita Android Python runtime launch APK probe"

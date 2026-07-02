@@ -48,13 +48,16 @@ jobs:
 
           case "${{ matrix.abi }}" in
             arm64-v8a)
+              triplet="aarch64-linux-android"
               machine_pattern="Machine:[[:space:]]*AArch64"
               ;;
             x86_64)
+              triplet="x86_64-linux-android"
               machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
               ;;
           esac
 
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
           echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
 
       - name: Download Krita Python runtime payload
@@ -110,15 +113,25 @@ jobs:
 
           payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
           init_probe="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}/libkrita_python_runtime_init_probe.so"
+          cxx_shared="$(find "$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triplet" \
+            -maxdepth 2 -name "libc++_shared.so" -print -quit 2>/dev/null || true)"
+          if [ -z "$cxx_shared" ]; then
+            cxx_shared="$(find "$ANDROID_HOME/ndk/27.3.13750724/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}" \
+              -maxdepth 1 -name "libc++_shared.so" -print -quit 2>/dev/null || true)"
+          fi
           output_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}"
           android_jar="$ANDROID_HOME/platforms/android-35/android.jar"
           build_tools_dir="$ANDROID_HOME/build-tools/35.0.0"
           readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
 
+          test -n "$cxx_shared"
+          test -f "$cxx_shared"
+
           bash scripts/package-krita-python-runtime-apk-probe.sh \
             "${{ matrix.abi }}" \
             "$payload" \
             "$init_probe" \
+            "$cxx_shared" \
             "$output_dir" \
             "$android_jar" \
             "$build_tools_dir" \
