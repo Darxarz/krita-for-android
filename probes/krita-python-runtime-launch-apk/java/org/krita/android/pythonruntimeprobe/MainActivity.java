@@ -24,7 +24,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v10";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v11";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -122,6 +122,7 @@ public final class MainActivity extends Activity {
         root.addView(makeChildImportOneButton("4b3. Child import PyQt5.QtXml", "PyQt5.QtXml"));
         root.addView(makeChildDlopenNativeButton("4b4. Child dlopen QtWidgets", qtLibraryName("Widgets")));
         root.addView(makeChildDlopenNativeButton("4b5. Child dlopen QtXml", qtLibraryName("Xml")));
+        root.addView(makeNativeInventoryButton());
         root.addView(makeChildDlopenNativeButton("4c0a. Child dlopen libkritalibbrush", "libkritalibbrush.so"));
         root.addView(makeChildDlopenNativeButton("4c0b. Child dlopen libkritaimage", "libkritaimage.so"));
         root.addView(makeChildDlopenNativeButton("4c0c. Child dlopen libkritaui", "libkritaui.so"));
@@ -253,6 +254,16 @@ public final class MainActivity extends Activity {
         });
     }
 
+    private Button makeNativeInventoryButton() {
+        return makeButton("4cI. Native library inventory", new Task() {
+            @Override
+            public void run() throws IOException {
+                requirePayload();
+                showResult(nativeInventoryReport());
+            }
+        });
+    }
+
     private static String qtLibraryName(String moduleName) {
         return "libQt5" + moduleName + "_" + primaryAbi() + ".so";
     }
@@ -262,6 +273,80 @@ public final class MainActivity extends Activity {
             return Build.SUPPORTED_ABIS[0];
         }
         return "arm64-v8a";
+    }
+
+    private String nativeInventoryReport() {
+        String[] expected = new String[] {
+                "libpython3.14.so",
+                "libc++_shared.so",
+                qtLibraryName("Core"),
+                qtLibraryName("Gui"),
+                qtLibraryName("Widgets"),
+                qtLibraryName("Xml"),
+                "libkritalibbrush.so",
+                "libkritaimage.so",
+                "libkritaui.so",
+                "libkritalibkis.so",
+                "libkritapykrita.so",
+                "libkrita_python_runtime_init_probe.so",
+                "libkrita_python_runtime_launcher.so",
+        };
+
+        File nativeDir = new File(getApplicationInfo().nativeLibraryDir);
+        StringBuilder report = new StringBuilder();
+        report.append(SCREEN_TITLE).append("\n\n");
+        report.append("nativeLibraryDir=").append(nativeDir.getAbsolutePath()).append('\n');
+        report.append("primaryAbi=").append(primaryAbi()).append('\n');
+        report.append("supportedAbis=").append(joinSupportedAbis()).append("\n\n");
+
+        for (String name : expected) {
+            appendFileLine(report, new File(nativeDir, name), name);
+        }
+
+        File pykrita = new File(runtimeRoot(), "assets/python/krita-python-libs/PyKrita/krita.so");
+        report.append('\n');
+        appendFileLine(report, pykrita, "assets PyKrita/krita.so");
+
+        report.append("\nDirectory libkrita entries:\n");
+        File[] files = nativeDir.listFiles();
+        if (files == null) {
+            report.append("listFiles=null\n");
+        } else {
+            int count = 0;
+            for (File file : files) {
+                String name = file.getName();
+                if (name.startsWith("libkrita") || name.startsWith("libQt5")) {
+                    report.append(name).append(" size=").append(file.length()).append('\n');
+                    count++;
+                }
+            }
+            report.append("matched=").append(count).append('\n');
+        }
+
+        return report.toString();
+    }
+
+    private static String joinSupportedAbis() {
+        if (Build.SUPPORTED_ABIS == null || Build.SUPPORTED_ABIS.length == 0) {
+            return "none";
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < Build.SUPPORTED_ABIS.length; index++) {
+            if (index > 0) {
+                result.append(',');
+            }
+            result.append(Build.SUPPORTED_ABIS[index]);
+        }
+        return result.toString();
+    }
+
+    private static void appendFileLine(StringBuilder report, File file, String label) {
+        report.append(label)
+                .append(" exists=").append(file.isFile())
+                .append(" size=").append(file.isFile() ? file.length() : -1)
+                .append(" path=").append(file.getAbsolutePath())
+                .append('\n');
     }
 
     private Button makeButton(String label, final Task task) {
@@ -436,13 +521,14 @@ public final class MainActivity extends Activity {
     }
 
     private void showResult(final String message) {
-        lastShortStatus = shorten(stripScreenTitle(message));
+        final String strippedMessage = stripScreenTitle(message);
+        lastShortStatus = shorten(strippedMessage);
         Log.i(TAG, message);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 statusView.setText(message);
-                appendLogLine(lastShortStatus);
+                appendLogLine(strippedMessage);
             }
         });
     }
@@ -453,7 +539,7 @@ public final class MainActivity extends Activity {
         }
 
         logBuffer.append(line).append('\n');
-        while (logBuffer.length() > 3000) {
+        while (logBuffer.length() > 20000) {
             int newline = logBuffer.indexOf("\n");
             if (newline < 0) {
                 logBuffer.setLength(0);

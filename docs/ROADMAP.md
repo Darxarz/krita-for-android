@@ -447,6 +447,13 @@ Python import failures. Это должно показать, какая native 
 `PyInit_krita`, или подтвердить, что crash находится в loader/static-init самого
 `PyKrita.krita`.
 
+Планшетный тест v10: `PyQt5.QtWidgets`, `PyQt5.QtXml`, `dlopen QtWidgets` и
+`dlopen QtXml` проходят успешно; все `dlopen` checks для Krita native libraries
+возвращают `FAILED`; `dlopen PyKrita.krita` и `import PyKrita.krita` продолжают
+падать в child process с `signal=11`. Следующий слой сохраняет полный `dlerror` в
+persistent log, добавляет native inventory на устройстве и проверяет наличие Krita
+libraries внутри launch APK на CI.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

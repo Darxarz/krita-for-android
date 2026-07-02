@@ -50,6 +50,10 @@ cp -a "$cxx_shared_so" "$native_lib_dir/libc++_shared.so"
 test -f "$assets_dir/python/lib/python3.14/os.py"
 test -f "$assets_dir/python/krita-python-libs/PyKrita/krita.so"
 test -f "$native_lib_dir/libpython3.14.so"
+test -f "$native_lib_dir/libkritalibbrush.so"
+test -f "$native_lib_dir/libkritaimage.so"
+test -f "$native_lib_dir/libkritaui.so"
+test -f "$native_lib_dir/libkritalibkis.so"
 test -f "$native_lib_dir/libkritapykrita.so"
 test -f "$native_lib_dir/libkrita_python_runtime_init_probe.so"
 test -f "$native_lib_dir/libkrita_python_runtime_launcher.so"
@@ -78,12 +82,12 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
-        android:label="Krita Probe Manual v10"
+        android:label="Krita Probe Manual v11"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Krita Probe Manual v10">
+            android:label="Krita Probe Manual v11">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -144,6 +148,10 @@ require_entry "classes.dex"
 require_entry "assets/python/lib/python3.14/os.py"
 require_entry "assets/python/krita-python-libs/PyKrita/krita.so"
 require_entry "lib/$abi/libpython3.14.so"
+require_entry "lib/$abi/libkritalibbrush.so"
+require_entry "lib/$abi/libkritaimage.so"
+require_entry "lib/$abi/libkritaui.so"
+require_entry "lib/$abi/libkritalibkis.so"
 require_entry "lib/$abi/libkritapykrita.so"
 require_entry "lib/$abi/libkrita_python_runtime_init_probe.so"
 require_entry "lib/$abi/libkrita_python_runtime_launcher.so"
@@ -169,6 +177,10 @@ check_dynamic_needed() {
 }
 
 check_machine "lib/$abi/libpython3.14.so"
+check_machine "lib/$abi/libkritalibbrush.so"
+check_machine "lib/$abi/libkritaimage.so"
+check_machine "lib/$abi/libkritaui.so"
+check_machine "lib/$abi/libkritalibkis.so"
 check_machine "lib/$abi/libkritapykrita.so"
 check_machine "lib/$abi/libkrita_python_runtime_init_probe.so"
 check_machine "lib/$abi/libkrita_python_runtime_launcher.so"

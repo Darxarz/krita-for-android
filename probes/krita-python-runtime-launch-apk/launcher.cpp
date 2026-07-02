@@ -7,6 +7,7 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <string>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -55,6 +56,18 @@ std::string pyKritaExtensionPath(const std::string &runtimeRoot)
     return runtimeRoot + "/assets/python/krita-python-libs/PyKrita/krita.so";
 }
 
+std::string describeFile(const std::string &path)
+{
+    struct stat info = {};
+    if (stat(path.c_str(), &info) != 0) {
+        return "file=" + path + "\nexists=0\nstat_errno=" + std::to_string(errno)
+                + "\nstat_error=" + std::strerror(errno);
+    }
+
+    return "file=" + path + "\nexists=1\nsize=" + std::to_string(static_cast<long long>(info.st_size))
+            + "\nmode=" + std::to_string(static_cast<unsigned int>(info.st_mode));
+}
+
 int dlopenPyKritaExtension(const std::string &runtimeRoot, std::string *message)
 {
     const std::string path = pyKritaExtensionPath(runtimeRoot);
@@ -63,7 +76,7 @@ int dlopenPyKritaExtension(const std::string &runtimeRoot, std::string *message)
     if (!handle) {
         const char *error = dlerror();
         if (message) {
-            *message = "FAILED: dlopen PyKrita.krita\npath=" + path + "\ndlerror="
+            *message = "FAILED: dlopen PyKrita.krita\n" + describeFile(path) + "\ndlerror="
                     + (error ? error : "unknown");
         }
         return -80;
@@ -75,7 +88,7 @@ int dlopenPyKritaExtension(const std::string &runtimeRoot, std::string *message)
     if (!initSymbol || symbolError) {
         dlclose(handle);
         if (message) {
-            *message = "FAILED: dlsym PyInit_krita\npath=" + path + "\ndlerror="
+            *message = "FAILED: dlsym PyInit_krita\n" + describeFile(path) + "\ndlerror="
                     + (symbolError ? symbolError : "symbol missing");
         }
         return -81;
@@ -83,7 +96,7 @@ int dlopenPyKritaExtension(const std::string &runtimeRoot, std::string *message)
 
     dlclose(handle);
     if (message) {
-        *message = "OK: dlopen PyKrita.krita and dlsym PyInit_krita\npath=" + path;
+        *message = "OK: dlopen PyKrita.krita and dlsym PyInit_krita\n" + describeFile(path);
     }
     return 0;
 }
@@ -95,7 +108,7 @@ int dlopenPath(const std::string &path, std::string *message)
     if (!handle) {
         const char *error = dlerror();
         if (message) {
-            *message = "FAILED: dlopen native library\npath=" + path + "\ndlerror="
+            *message = "FAILED: dlopen native library\n" + describeFile(path) + "\ndlerror="
                     + (error ? error : "unknown");
         }
         return -82;
@@ -103,7 +116,7 @@ int dlopenPath(const std::string &path, std::string *message)
 
     dlclose(handle);
     if (message) {
-        *message = "OK: dlopen native library\npath=" + path;
+        *message = "OK: dlopen native library\n" + describeFile(path);
     }
     return 0;
 }
@@ -176,6 +189,12 @@ std::string runChildProbe(ChildProbeMode mode, const std::string &runtimeRoot, c
 
     if (pid == 0) {
         close(pipeFds[0]);
+
+        if (mode == ChildProbeMode::DlopenPyKrita) {
+            writeAll(pipeFds[1], "preflight:\n" + describeFile(pyKritaExtensionPath(runtimeRoot)) + "\n");
+        } else if (mode == ChildProbeMode::DlopenPath) {
+            writeAll(pipeFds[1], "preflight:\n" + describeFile(moduleName) + "\n");
+        }
 
         std::string childMessage;
         const int result = runChildBody(mode, runtimeRoot, moduleName, &childMessage);
