@@ -4,11 +4,15 @@
 
 #include <cerrno>
 #include <cstdio>
+#include <cstdint>
 #include <cstring>
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <string>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <ucontext.h>
 #include <unistd.h>
 
 extern "C" int krita_android_python_runtime_init_probe(const char *runtimeRoot);
@@ -27,6 +31,7 @@ namespace
 {
 constexpr const char *LOG_TAG = "KritaPyRuntimeProbe";
 constexpr int CHILD_PROBE_FAILED_EXIT = 100;
+int g_childCrashPipeFd = -1;
 
 enum class ChildProbeMode
 {
@@ -54,6 +59,146 @@ std::string toString(JNIEnv *env, jstring value)
 std::string pyKritaExtensionPath(const std::string &runtimeRoot)
 {
     return runtimeRoot + "/assets/python/krita-python-libs/PyKrita/krita.so";
+}
+
+void writeRaw(int fd, const char *text)
+{
+    if (fd < 0 || !text) {
+        return;
+    }
+    write(fd, text, std::strlen(text));
+}
+
+void writeDecimal(int fd, long long value)
+{
+    char buffer[32] = {};
+    char *cursor = buffer + sizeof(buffer) - 1;
+    bool negative = value < 0;
+    unsigned long long remaining = negative
+            ? static_cast<unsigned long long>(-value)
+            : static_cast<unsigned long long>(value);
+
+    do {
+        *--cursor = static_cast<char>('0' + (remaining % 10));
+        remaining /= 10;
+    } while (remaining > 0 && cursor > buffer);
+
+    if (negative && cursor > buffer) {
+        *--cursor = '-';
+    }
+
+    write(fd, cursor, static_cast<size_t>((buffer + sizeof(buffer) - 1) - cursor));
+}
+
+void writeHex(int fd, uintptr_t value)
+{
+    char buffer[2 + sizeof(uintptr_t) * 2] = {};
+    buffer[0] = '0';
+    buffer[1] = 'x';
+    for (size_t index = 0; index < sizeof(uintptr_t) * 2; ++index) {
+        const size_t shift = (sizeof(uintptr_t) * 2 - index - 1) * 4;
+        const uintptr_t nibble = (value >> shift) & 0xf;
+        buffer[2 + index] = static_cast<char>(nibble < 10 ? '0' + nibble : 'a' + (nibble - 10));
+    }
+    write(fd, buffer, sizeof(buffer));
+}
+
+uintptr_t signalPc(void *context)
+{
+#if defined(__aarch64__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.pc);
+#elif defined(__arm__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.arm_pc);
+#else
+    (void)context;
+    return 0;
+#endif
+}
+
+uintptr_t signalLr(void *context)
+{
+#if defined(__aarch64__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.regs[30]);
+#elif defined(__arm__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.arm_lr);
+#else
+    (void)context;
+    return 0;
+#endif
+}
+
+uintptr_t signalSp(void *context)
+{
+#if defined(__aarch64__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.sp);
+#elif defined(__arm__)
+    return static_cast<uintptr_t>(reinterpret_cast<ucontext_t *>(context)->uc_mcontext.arm_sp);
+#else
+    (void)context;
+    return 0;
+#endif
+}
+
+void writeMapsSnapshot(int fd)
+{
+    const int mapsFd = open("/proc/self/maps", O_RDONLY | O_CLOEXEC);
+    if (mapsFd < 0) {
+        writeRaw(fd, "maps_open_errno=");
+        writeDecimal(fd, errno);
+        writeRaw(fd, "\n");
+        return;
+    }
+
+    writeRaw(fd, "/proc/self/maps:\n");
+    char buffer[1024];
+    size_t total = 0;
+    while (total < 12000) {
+        ssize_t count = read(mapsFd, buffer, sizeof(buffer));
+        if (count <= 0) {
+            break;
+        }
+        write(fd, buffer, static_cast<size_t>(count));
+        total += static_cast<size_t>(count);
+    }
+    close(mapsFd);
+    writeRaw(fd, "\n/maps_end\n");
+}
+
+void childSignalHandler(int signalNumber, siginfo_t *info, void *context)
+{
+    const int fd = g_childCrashPipeFd;
+    if (fd >= 0) {
+        writeRaw(fd, "\nchild_signal_handler:\nsignal=");
+        writeDecimal(fd, signalNumber);
+        writeRaw(fd, "\nsi_code=");
+        writeDecimal(fd, info ? info->si_code : 0);
+        writeRaw(fd, "\nfault_addr=");
+        writeHex(fd, reinterpret_cast<uintptr_t>(info ? info->si_addr : nullptr));
+        writeRaw(fd, "\npc=");
+        writeHex(fd, signalPc(context));
+        writeRaw(fd, "\nlr=");
+        writeHex(fd, signalLr(context));
+        writeRaw(fd, "\nsp=");
+        writeHex(fd, signalSp(context));
+        writeRaw(fd, "\n");
+        writeMapsSnapshot(fd);
+    }
+    _exit(128 + signalNumber);
+}
+
+void installChildCrashHandlers(int pipeFd)
+{
+    g_childCrashPipeFd = pipeFd;
+
+    struct sigaction action = {};
+    action.sa_sigaction = childSignalHandler;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_SIGINFO | SA_RESETHAND;
+
+    sigaction(SIGSEGV, &action, nullptr);
+    sigaction(SIGBUS, &action, nullptr);
+    sigaction(SIGABRT, &action, nullptr);
+    sigaction(SIGILL, &action, nullptr);
 }
 
 std::string describeFile(const std::string &path)
@@ -189,6 +334,7 @@ std::string runChildProbe(ChildProbeMode mode, const std::string &runtimeRoot, c
 
     if (pid == 0) {
         close(pipeFds[0]);
+        installChildCrashHandlers(pipeFds[1]);
 
         if (mode == ChildProbeMode::DlopenPyKrita) {
             writeAll(pipeFds[1], "preflight:\n" + describeFile(pyKritaExtensionPath(runtimeRoot)) + "\n");
@@ -229,6 +375,10 @@ std::string runChildProbe(ChildProbeMode mode, const std::string &runtimeRoot, c
 
     if (WIFEXITED(status)) {
         const int exitCode = WEXITSTATUS(status);
+        if (exitCode >= 128) {
+            return "FAILED: " + label + " crashed via handler\nsignal="
+                    + std::to_string(exitCode - 128) + "\n" + childMessage;
+        }
         return std::string(exitCode == 0 ? "OK: " : "FAILED: ") + label
                 + " exited " + std::to_string(exitCode) + "\n" + childMessage;
     }

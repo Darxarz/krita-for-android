@@ -454,6 +454,12 @@ Python import failures. Это должно показать, какая native 
 persistent log, добавляет native inventory на устройстве и проверяет наличие Krita
 libraries внутри launch APK на CI.
 
+Планшетный тест v11: native inventory показывает, что Krita `.so` файлы существуют
+в `nativeLibraryDir` и имеют ненулевой размер, но `dlopen libkritalibbrush`,
+`libkritaimage`, `libkritaui`, `libkritalibkis`, `libkritapykrita` и `PyKrita.krita`
+падают с `signal=11`. Следующий слой ставит signal handler в child process и пишет
+`fault_addr`, `pc`, `lr`, `sp` и snapshot `/proc/self/maps` в persistent log.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
