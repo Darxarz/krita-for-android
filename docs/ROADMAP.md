@@ -460,6 +460,11 @@ libraries внутри launch APK на CI.
 падают с `signal=11`. Следующий слой ставит signal handler в child process и пишет
 `fault_addr`, `pc`, `lr`, `sp` и snapshot `/proc/self/maps` в persistent log.
 
+Планшетный тест v12: crash handler подтверждает `fault_addr=0`, `pc=lr` и показывает,
+что crash происходит при загрузке Krita libraries, когда они уже существуют и мапятся
+в память. Следующий слой добавляет `pc_map`, `lr_map`, `sp_map` и кнопку копирования
+полного persistent log, чтобы больше не читать длинные tombstone по скриншотам.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

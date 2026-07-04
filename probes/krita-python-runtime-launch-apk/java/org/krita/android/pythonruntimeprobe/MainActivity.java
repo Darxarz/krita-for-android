@@ -1,6 +1,8 @@
 package org.krita.android.pythonruntimeprobe;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.os.Build;
@@ -24,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v12";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v13";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -64,11 +66,13 @@ public final class MainActivity extends Activity {
         statusView.setGravity(Gravity.START | Gravity.TOP);
         statusView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         statusView.setMinLines(8);
+        statusView.setTextIsSelectable(true);
         root.addView(statusView, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         root.addView(makeUiTestButton());
+        root.addView(makeCopyLogButton());
 
         root.addView(makeButton("1a. Load libpython only", new Task() {
             @Override
@@ -168,6 +172,7 @@ public final class MainActivity extends Activity {
         logView.setGravity(Gravity.START | Gravity.TOP);
         logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         logView.setPadding(16, 16, 16, 16);
+        logView.setTextIsSelectable(true);
         LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -200,6 +205,26 @@ public final class MainActivity extends Activity {
                 showResult(message);
                 button.setText("UI click test: " + uiClickCount);
                 Toast.makeText(MainActivity.this, "UI click " + uiClickCount, Toast.LENGTH_SHORT).show();
+            }
+        });
+        return button;
+    }
+
+    private Button makeCopyLogButton() {
+        final Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText("Copy persistent log");
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 12, 0, 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                copyTextToClipboard("Krita Probe persistent log", persistentLogText());
+                Toast.makeText(MainActivity.this, "Persistent log copied", Toast.LENGTH_SHORT).show();
             }
         });
         return button;
@@ -533,13 +558,26 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void appendLogLine(String line) {
+    private synchronized String persistentLogText() {
+        return "Persistent log:\n" + logBuffer;
+    }
+
+    private void copyTextToClipboard(String label, String text) {
+        ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard == null) {
+            showResult("FAILED: Clipboard service is not available");
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text));
+    }
+
+    private synchronized void appendLogLine(String line) {
         if (logView == null) {
             return;
         }
 
         logBuffer.append(line).append('\n');
-        while (logBuffer.length() > 20000) {
+        while (logBuffer.length() > 80000) {
             int newline = logBuffer.indexOf("\n");
             if (newline < 0) {
                 logBuffer.setLength(0);
@@ -548,7 +586,7 @@ public final class MainActivity extends Activity {
             logBuffer.delete(0, newline + 1);
         }
 
-        logView.setText("Persistent log:\n" + logBuffer);
+        logView.setText(persistentLogText());
     }
 
     private static String stripScreenTitle(String message) {

@@ -103,6 +103,104 @@ void writeHex(int fd, uintptr_t value)
     write(fd, buffer, sizeof(buffer));
 }
 
+bool hexValue(char value, uintptr_t *digit)
+{
+    if (value >= '0' && value <= '9') {
+        *digit = static_cast<uintptr_t>(value - '0');
+        return true;
+    }
+    if (value >= 'a' && value <= 'f') {
+        *digit = static_cast<uintptr_t>(value - 'a' + 10);
+        return true;
+    }
+    if (value >= 'A' && value <= 'F') {
+        *digit = static_cast<uintptr_t>(value - 'A' + 10);
+        return true;
+    }
+    return false;
+}
+
+const char *parseHex(const char *cursor, const char *end, uintptr_t *result)
+{
+    uintptr_t value = 0;
+    bool any = false;
+    while (cursor < end) {
+        uintptr_t digit = 0;
+        if (!hexValue(*cursor, &digit)) {
+            break;
+        }
+        value = (value << 4) | digit;
+        any = true;
+        ++cursor;
+    }
+    if (!any) {
+        return nullptr;
+    }
+    *result = value;
+    return cursor;
+}
+
+void writeMapLineForAddress(int fd, const char *label, uintptr_t address)
+{
+    writeRaw(fd, label);
+    writeRaw(fd, "=");
+    writeHex(fd, address);
+    if (address == 0) {
+        writeRaw(fd, " no-map\n");
+        return;
+    }
+
+    const int mapsFd = open("/proc/self/maps", O_RDONLY | O_CLOEXEC);
+    if (mapsFd < 0) {
+        writeRaw(fd, " maps_open_errno=");
+        writeDecimal(fd, errno);
+        writeRaw(fd, "\n");
+        return;
+    }
+
+    char buffer[1024];
+    char line[1024];
+    size_t lineLength = 0;
+    bool matched = false;
+
+    while (!matched) {
+        const ssize_t count = read(mapsFd, buffer, sizeof(buffer));
+        if (count <= 0) {
+            break;
+        }
+
+        for (ssize_t index = 0; index < count && !matched; ++index) {
+            const char current = buffer[index];
+            if (lineLength < sizeof(line) - 1) {
+                line[lineLength++] = current;
+            }
+            if (current != '\n') {
+                continue;
+            }
+
+            const char *begin = line;
+            const char *end = line + lineLength;
+            uintptr_t start = 0;
+            uintptr_t finish = 0;
+            const char *cursor = parseHex(begin, end, &start);
+            if (cursor && cursor < end && *cursor == '-') {
+                cursor = parseHex(cursor + 1, end, &finish);
+                if (cursor && address >= start && address < finish) {
+                    writeRaw(fd, " map=");
+                    write(fd, line, lineLength);
+                    matched = true;
+                }
+            }
+            lineLength = 0;
+        }
+    }
+
+    close(mapsFd);
+    if (!matched) {
+        writeRaw(fd, " no-matching-map\n");
+    }
+}
+
 uintptr_t signalPc(void *context)
 {
 #if defined(__aarch64__)
@@ -168,19 +266,28 @@ void childSignalHandler(int signalNumber, siginfo_t *info, void *context)
 {
     const int fd = g_childCrashPipeFd;
     if (fd >= 0) {
+        const uintptr_t pc = signalPc(context);
+        const uintptr_t lr = signalLr(context);
+        const uintptr_t sp = signalSp(context);
+        const uintptr_t fault = reinterpret_cast<uintptr_t>(info ? info->si_addr : nullptr);
+
         writeRaw(fd, "\nchild_signal_handler:\nsignal=");
         writeDecimal(fd, signalNumber);
         writeRaw(fd, "\nsi_code=");
         writeDecimal(fd, info ? info->si_code : 0);
         writeRaw(fd, "\nfault_addr=");
-        writeHex(fd, reinterpret_cast<uintptr_t>(info ? info->si_addr : nullptr));
+        writeHex(fd, fault);
         writeRaw(fd, "\npc=");
-        writeHex(fd, signalPc(context));
+        writeHex(fd, pc);
         writeRaw(fd, "\nlr=");
-        writeHex(fd, signalLr(context));
+        writeHex(fd, lr);
         writeRaw(fd, "\nsp=");
-        writeHex(fd, signalSp(context));
+        writeHex(fd, sp);
         writeRaw(fd, "\n");
+        writeMapLineForAddress(fd, "fault_map", fault);
+        writeMapLineForAddress(fd, "pc_map", pc);
+        writeMapLineForAddress(fd, "lr_map", lr);
+        writeMapLineForAddress(fd, "sp_map", sp);
         writeMapsSnapshot(fd);
     }
     _exit(128 + signalNumber);
