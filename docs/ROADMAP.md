@@ -465,6 +465,14 @@ libraries внутри launch APK на CI.
 в память. Следующий слой добавляет `pc_map`, `lr_map`, `sp_map` и кнопку копирования
 полного persistent log, чтобы больше не читать длинные tombstone по скриншотам.
 
+Планшетный тест v13: копируемый persistent log подтвердил, что `pc_map` для падений
+`libkritalibbrush`, `libkritaimage` и `PyKrita.krita` указывает на
+`libQt5Core_arm64-v8a.so`. Локальный `addr2line` по одинаковому relative offset
+попадает в `QJNIEnvironmentPrivate::QJNIEnvironmentPrivate()`, где Qt разыменовывает
+результат `QtAndroidPrivate::javaVM()`. Следующий слой `Krita Probe Manual v14`
+грузит `QtCore` через Java `System.load` до Python/init/launcher/Krita `dlopen`, чтобы
+запустить `JNI_OnLoad` QtCore и передать Qt текущий `JavaVM`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

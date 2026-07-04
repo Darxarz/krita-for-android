@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v13";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v14";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -37,6 +37,7 @@ public final class MainActivity extends Activity {
 
     private TextView statusView;
     private TextView logView;
+    private volatile boolean qtCoreLibraryLoaded;
     private volatile boolean pythonLibraryLoaded;
     private volatile boolean initProbeLibraryLoaded;
     private volatile boolean launcherLibraryLoaded;
@@ -92,6 +93,13 @@ public final class MainActivity extends Activity {
             @Override
             public void run() {
                 loadLauncherLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1q. Load QtCore via Java", new Task() {
+            @Override
+            public void run() {
+                loadQtCoreLibraryIfNeeded();
             }
         }));
 
@@ -447,10 +455,21 @@ public final class MainActivity extends Activity {
     }
 
     private synchronized void loadAllNativeLibrariesIfNeeded() {
+        loadQtCoreLibraryIfNeeded();
         loadPythonLibraryIfNeeded();
         loadInitProbeLibraryIfNeeded();
         loadLauncherLibraryIfNeeded();
         showStep("All native libraries loaded OK.");
+    }
+
+    private synchronized void loadQtCoreLibraryIfNeeded() {
+        if (qtCoreLibraryLoaded) {
+            showStep(qtLibraryName("Core") + " already loaded through Java.");
+            return;
+        }
+
+        loadNativeLibrary(qtLibraryName("Core"));
+        qtCoreLibraryLoaded = true;
     }
 
     private synchronized void loadPythonLibraryIfNeeded() {
