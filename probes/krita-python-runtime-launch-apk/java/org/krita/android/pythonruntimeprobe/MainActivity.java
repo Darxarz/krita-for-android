@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v14";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v15";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -51,6 +51,7 @@ public final class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setTitle(SCREEN_TITLE);
+        org.qtproject.qt5.android.QtNative.setActivityForProbe(this);
 
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
@@ -96,7 +97,7 @@ public final class MainActivity extends Activity {
             }
         }));
 
-        root.addView(makeButton("1q. Load QtCore via Java", new Task() {
+        root.addView(makeButton("1q. Load QtCore via Java QtNative", new Task() {
             @Override
             public void run() {
                 loadQtCoreLibraryIfNeeded();

@@ -473,6 +473,14 @@ libraries внутри launch APK на CI.
 грузит `QtCore` через Java `System.load` до Python/init/launcher/Krita `dlopen`, чтобы
 запустить `JNI_OnLoad` QtCore и передать Qt текущий `JavaVM`.
 
+Планшетный тест v14: прямой Java `System.load(libQt5Core_arm64-v8a.so)` доходит до
+`JNI_OnLoad`, но возвращает `JNI_ERR`. Разбор Qt 5.15.2 `qjnihelpers.cpp` и symbols
+`libQt5Core` показывает, что `QtAndroidPrivate::initJNI()` сначала ищет Java class
+`org/qtproject/qt5/android/QtNative`, вызывает `activity()`, `service()` и
+`classLoader()`, регистрирует native callbacks, и только после этого сохраняет
+`JavaVM`. Следующий слой `Krita Probe Manual v15` добавляет минимальный probe-only
+`QtNative` Java stub в APK, чтобы `JNI_OnLoad` мог завершиться и выставить `JavaVM`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
