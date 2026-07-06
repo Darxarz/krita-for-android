@@ -7,6 +7,7 @@ on:
       - ".github/workflows/krita-python-runtime-launch-apk-probe-android.yml"
       - "scripts/package-krita-python-runtime-launch-apk-probe.sh"
       - "probes/krita-python-runtime-launch-apk/**"
+      - "probes/krita-python-runtime-payload/**"
 
 permissions:
   contents: read

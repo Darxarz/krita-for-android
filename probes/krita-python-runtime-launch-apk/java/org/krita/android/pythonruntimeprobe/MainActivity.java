@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v15";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v16";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -144,6 +144,7 @@ public final class MainActivity extends Activity {
         root.addView(makeChildDlopenPyKritaButton());
         root.addView(makeChildImportOneButton("4c1. Child import PyKrita.krita", "PyKrita.krita"));
         root.addView(makeImportOneButton("4cZ. Import PyKrita.krita crash test", "PyKrita.krita"));
+        root.addView(makeImportOneButton("4d0. Import pykrita helper", "pykrita"));
         root.addView(makeImportOneButton("4d. Import krita", "krita"));
 
         root.addView(makeButton("4z. Import all Python modules crash test", new Task() {
@@ -340,6 +341,8 @@ public final class MainActivity extends Activity {
         File pykrita = new File(runtimeRoot(), "assets/python/krita-python-libs/PyKrita/krita.so");
         report.append('\n');
         appendFileLine(report, pykrita, "assets PyKrita/krita.so");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/pykrita.py"),
+                "assets pykrita.py");
 
         report.append("\nDirectory libkrita entries:\n");
         File[] files = nativeDir.listFiles();

@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/krita-python-runtime-payload-android.yml"
       - "scripts/stage-krita-python-runtime-payload.sh"
+      - "probes/krita-python-runtime-payload/**"
 
 permissions:
   contents: read

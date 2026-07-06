@@ -15,12 +15,17 @@ output_dir="$6"
 readelf_bin="$7"
 machine_pattern="$8"
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+pykrita_stub="$repo_root/probes/krita-python-runtime-payload/pykrita.py"
+
 python_version="3.14"
 site_packages="$pyqt_prefix/lib/python${python_version}/site-packages"
 
 test -f "$pyqt_prefix/lib/libpython${python_version}.so"
 test -f "$pyqt_prefix/lib/libQt5Core_${abi}.so"
 test -f "$site_packages/PyQt5/sip.cpython-314-${triplet}.so"
+test -f "$pykrita_stub"
 test -d "$krita_source_dir/plugins/extensions/pykrita/plugin/krita"
 
 pykrita_module="$(find "$real_seed_dir" -name "krita.so" -print -quit)"
@@ -46,12 +51,14 @@ find "$real_seed_dir" -type f -name "libkrita*.so" \
 
 cp -a "$pyqt_prefix/lib/python${python_version}" "$python_lib_dir/"
 cp -a "$pykrita_module" "$krita_python_libs_dir/PyKrita/krita.so"
+cp -a "$pykrita_stub" "$krita_python_libs_dir/pykrita.py"
 cp -a "$krita_source_dir/plugins/extensions/pykrita/plugin/krita" "$krita_python_libs_dir/"
 
 test -f "$assets_python_dir/lib/python${python_version}/os.py"
 test -f "$assets_python_dir/lib/python${python_version}/site.py"
 test -f "$assets_python_dir/lib/python${python_version}/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
 test -f "$krita_python_libs_dir/PyKrita/krita.so"
+test -f "$krita_python_libs_dir/pykrita.py"
 test -f "$krita_python_libs_dir/krita/__init__.py"
 test -f "$jni_lib_dir/libpython${python_version}.so"
 test -f "$jni_lib_dir/libQt5Core_${abi}.so"

@@ -18,11 +18,16 @@ build_tools_dir="$9"
 readelf_bin="${10}"
 machine_pattern="${11}"
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+pykrita_stub="$repo_root/probes/krita-python-runtime-payload/pykrita.py"
+
 test -d "$payload_dir/jniLibs/$abi"
 test -d "$payload_dir/assets/python"
 test -f "$init_probe_so"
 test -f "$launcher_so"
 test -f "$cxx_shared_so"
+test -f "$pykrita_stub"
 test -f "$java_source_dir/org/krita/android/pythonruntimeprobe/MainActivity.java"
 test -f "$android_jar"
 test -x "$build_tools_dir/aapt2"
@@ -41,6 +46,7 @@ dex_dir="$work_dir/dex"
 mkdir -p "$assets_dir" "$native_lib_dir" "$classes_dir" "$dex_dir"
 
 cp -a "$payload_dir/assets/python" "$assets_dir/"
+cp -a "$pykrita_stub" "$assets_dir/python/krita-python-libs/pykrita.py"
 find "$payload_dir/jniLibs/$abi" -maxdepth 1 -type f \( -name "*.so" -o -name "*.so.*" \) \
     -exec cp -a {} "$native_lib_dir/" \;
 cp -a "$init_probe_so" "$native_lib_dir/libkrita_python_runtime_init_probe.so"
@@ -49,6 +55,7 @@ cp -a "$cxx_shared_so" "$native_lib_dir/libc++_shared.so"
 
 test -f "$assets_dir/python/lib/python3.14/os.py"
 test -f "$assets_dir/python/krita-python-libs/PyKrita/krita.so"
+test -f "$assets_dir/python/krita-python-libs/pykrita.py"
 test -f "$native_lib_dir/libpython3.14.so"
 test -f "$native_lib_dir/libkritalibbrush.so"
 test -f "$native_lib_dir/libkritaimage.so"
@@ -82,12 +89,12 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
-        android:label="Krita Probe Manual v15"
+        android:label="Krita Probe Manual v16"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Krita Probe Manual v15">
+            android:label="Krita Probe Manual v16">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -147,6 +154,7 @@ require_entry "AndroidManifest.xml"
 require_entry "classes.dex"
 require_entry "assets/python/lib/python3.14/os.py"
 require_entry "assets/python/krita-python-libs/PyKrita/krita.so"
+require_entry "assets/python/krita-python-libs/pykrita.py"
 require_entry "lib/$abi/libpython3.14.so"
 require_entry "lib/$abi/libkritalibbrush.so"
 require_entry "lib/$abi/libkritaimage.so"

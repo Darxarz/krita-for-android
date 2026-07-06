@@ -481,6 +481,16 @@ libraries внутри launch APK на CI.
 `JavaVM`. Следующий слой `Krita Probe Manual v15` добавляет минимальный probe-only
 `QtNative` Java stub в APK, чтобы `JNI_OnLoad` мог завершиться и выставить `JavaVM`.
 
+Планшетный тест v15: `QtCore` грузится через Java `System.load`, все child `dlopen`
+checks для Krita native libraries проходят, `dlopen PyKrita.krita`, child import
+`PyKrita.krita` и direct import `PyKrita.krita` проходят. Остался не native crash, а
+обычный Python blocker: `import krita` падает с `ModuleNotFoundError: No module named
+'pykrita'`. В desktop Krita этот helper module регистрируется PyKrita plugin startup,
+а probe импортирует public wrapper вне полного Krita app startup. Следующий слой
+`Krita Probe Manual v16` добавляет probe-only `pykrita.py` helper stub с
+`qt_major_version()` и `qDebug()` в `krita-python-libs` и отдельную кнопку
+`4d0. Import pykrita helper`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
