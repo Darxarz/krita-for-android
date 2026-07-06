@@ -186,6 +186,8 @@ void writeMapLineForAddress(int fd, const char *label, uintptr_t address)
             if (cursor && cursor < end && *cursor == '-') {
                 cursor = parseHex(cursor + 1, end, &finish);
                 if (cursor && address >= start && address < finish) {
+                    writeRaw(fd, " offset=");
+                    writeHex(fd, address - start);
                     writeRaw(fd, " map=");
                     write(fd, line, lineLength);
                     matched = true;

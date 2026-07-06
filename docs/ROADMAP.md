@@ -501,6 +501,17 @@ Manual v17` переводит обычную кнопку `4d` на child-proce
 оставляет только как `4dZ` crash test, чтобы следующий лог фиксировал причину без
 закрытия приложения.
 
+Планшетный тест v17: `4d. Child import krita` больше не закрывает UI и показывает
+`signal=11`. Символикация APK artifact дала `pc=libQt5Core_arm64-v8a.so+0x20c8dc`
+как `QObject::thread() const`, а `lr=libkritawidgets.so+0x162cd4` как
+`KoResourceServer<KoPattern>::KoResourceServer(QString const&)`. Это значит, что
+public Python package `krita` доходит до eager `Krita.instance()` из
+`plugins/extensions/pykrita/plugin/krita/__init__.py` и пытается поднять Krita
+resource servers без полноценного Krita application context. Следующий слой
+`Krita Probe Manual v18` добавляет probe-only `krita_probe_safe_import.py`, который
+исполняет реальный `krita/__init__.py`, но пропускает только три eager alias строки
+`Krita.instance()`, а также печатает relative offsets прямо в crash map.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
