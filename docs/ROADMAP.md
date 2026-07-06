@@ -491,6 +491,16 @@ checks для Krita native libraries проходят, `dlopen PyKrita.krita`, c
 `qt_major_version()` и `qDebug()` в `krita-python-libs` и отдельную кнопку
 `4d0. Import pykrita helper`.
 
+Планшетный тест v16: `Run setup sequence`, `4d0. Import pykrita helper` и native
+`dlopen` проверки проходят, но direct `4d. Import krita` все еще роняет основной
+процесс. При этом child imports уже показывают Python-level blockers:
+`PyQt5.QtWidgets` падает с `EnumType.__call__() got an unexpected keyword argument
+'qualname'`, `PyQt5.QtXml` с `a bytes-like object is required, not 'int'`, а
+`PyKrita.krita` с `Collection() takes no arguments`. Следующий слой `Krita Probe
+Manual v17` переводит обычную кнопку `4d` на child-process import, а прямой import
+оставляет только как `4dZ` crash test, чтобы следующий лог фиксировал причину без
+закрытия приложения.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
