@@ -142,7 +142,7 @@ jobs:
       - name: Upload Krita Python runtime APK probe
         uses: actions/upload-artifact@v4
         with:
-          name: krita-python-runtime-apk-probe-${{ matrix.abi }}
+          name: krita-python-runtime-payload-only-no-launcher-${{ matrix.abi }}
           path: |
-            artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}/krita-python-runtime-probe-${{ matrix.abi }}.apk
+            artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}/krita-python-runtime-payload-only-${{ matrix.abi }}.apk
             artifacts/krita-python-runtime-apk-probe/${{ matrix.abi }}/MANIFEST.txt

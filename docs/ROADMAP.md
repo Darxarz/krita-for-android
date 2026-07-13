@@ -512,6 +512,13 @@ resource servers без полноценного Krita application context. Сл
 исполняет реальный `krita/__init__.py`, но пропускает только три eager alias строки
 `Krita.instance()`, а также печатает relative offsets прямо в crash map.
 
+`Krita Probe Manual v19` устраняет двусмысленность APK artifacts: launchable manual
+получает самостоятельный `versionCode`, явную icon и имя
+`krita-probe-manual-v19-<abi>.apk`. Отдельный технический payload-only APK теперь
+использует другой package id и явно помечен `no launcher`, поэтому он не сможет
+заменить запускаемый manual. Packaging проверяет через `aapt2 dump badging`, что
+готовый APK действительно содержит launchable `MainActivity`.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

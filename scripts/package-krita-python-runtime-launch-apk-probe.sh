@@ -87,18 +87,22 @@ cp "$dex_dir/classes.dex" "$work_dir/classes.dex"
 
 cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.krita.android.pythonruntimeprobe">
+    package="org.krita.android.pythonruntimeprobe"
+    android:versionCode="19"
+    android:versionName="0.19">
     <uses-sdk
         android:minSdkVersion="24"
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
-        android:label="Krita Probe Manual v18"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:label="Krita Probe Manual v19"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Krita Probe Manual v18">
+            android:label="Krita Probe Manual v19">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -108,10 +112,10 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 </manifest>
 EOF
 
-unsigned_base_apk="$output_dir/krita-python-runtime-launch-probe-${abi}-base.apk"
-unsigned_apk="$output_dir/krita-python-runtime-launch-probe-${abi}-unsigned.apk"
-aligned_apk="$output_dir/krita-python-runtime-launch-probe-${abi}-aligned.apk"
-signed_apk="$output_dir/krita-python-runtime-launch-probe-${abi}.apk"
+unsigned_base_apk="$output_dir/krita-probe-manual-v19-${abi}-base.apk"
+unsigned_apk="$output_dir/krita-probe-manual-v19-${abi}-unsigned.apk"
+aligned_apk="$output_dir/krita-probe-manual-v19-${abi}-aligned.apk"
+signed_apk="$output_dir/krita-probe-manual-v19-${abi}.apk"
 keystore="$output_dir/debug.keystore"
 
 "$build_tools_dir/aapt2" link \
@@ -146,6 +150,12 @@ keytool -genkeypair \
     "$aligned_apk"
 
 "$build_tools_dir/apksigner" verify --verbose --print-certs "$signed_apk"
+
+"$build_tools_dir/aapt2" dump badging "$signed_apk" | tee "$output_dir/apk-badging.txt"
+grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='19' versionName='0.19'" "$output_dir/apk-badging.txt"
+grep -Fq "application: label='Krita Probe Manual v19'" "$output_dir/apk-badging.txt"
+grep -Eq "^application:.*icon='[^']+'" "$output_dir/apk-badging.txt"
+grep -Fq "launchable-activity: name='org.krita.android.pythonruntimeprobe.MainActivity'" "$output_dir/apk-badging.txt"
 
 zipinfo -1 "$signed_apk" | tee "$output_dir/apk-entries.txt"
 
@@ -206,6 +216,8 @@ check_dynamic_needed "lib/$abi/libkrita_python_runtime_launcher.so" "libc++_shar
 {
     echo "Krita Android Python runtime launch APK probe"
     echo "abi=$abi"
+    echo
+    cat "$output_dir/apk-badging.txt"
     echo
     cat "$output_dir/apk-entries.txt"
 } > "$output_dir/MANIFEST.txt"

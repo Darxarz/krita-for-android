@@ -62,21 +62,23 @@ test -f "$native_lib_dir/libc++_shared.so"
 
 cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.krita.android.pythonruntimeprobe">
+    package="org.krita.android.pythonruntimepayloadprobe"
+    android:versionCode="19"
+    android:versionName="0.19">
     <uses-sdk
         android:minSdkVersion="24"
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
         android:hasCode="false"
-        android:label="Krita Python Runtime Probe" />
+        android:label="Krita Python Runtime Payload (no launcher)" />
 </manifest>
 EOF
 
-unsigned_base_apk="$output_dir/krita-python-runtime-probe-${abi}-base.apk"
-unsigned_apk="$output_dir/krita-python-runtime-probe-${abi}-unsigned.apk"
-aligned_apk="$output_dir/krita-python-runtime-probe-${abi}-aligned.apk"
-signed_apk="$output_dir/krita-python-runtime-probe-${abi}.apk"
+unsigned_base_apk="$output_dir/krita-python-runtime-payload-only-${abi}-base.apk"
+unsigned_apk="$output_dir/krita-python-runtime-payload-only-${abi}-unsigned.apk"
+aligned_apk="$output_dir/krita-python-runtime-payload-only-${abi}-aligned.apk"
+signed_apk="$output_dir/krita-python-runtime-payload-only-${abi}.apk"
 keystore="$output_dir/debug.keystore"
 
 "$build_tools_dir/aapt2" link \
