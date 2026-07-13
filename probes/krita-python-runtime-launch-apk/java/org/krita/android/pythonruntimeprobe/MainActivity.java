@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v19";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v20";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -147,6 +147,8 @@ public final class MainActivity extends Activity {
         root.addView(makeImportOneButton("4d0. Import pykrita helper", "pykrita"));
         root.addView(makeChildImportOneButton("4d. Child import krita", "krita"));
         root.addView(makeChildImportOneButton("4d1. Child safe krita bootstrap", "krita_probe_safe_import"));
+        root.addView(makeChildImportOneButton("4d2. Child create QApplication", "krita_probe_qapplication"));
+        root.addView(makeChildImportOneButton("4d3. Child QApplication then krita", "krita_probe_qapplication_import"));
         root.addView(makeImportOneButton("4dZ. Import krita crash test", "krita"));
 
         root.addView(makeButton("4z. Import all Python modules crash test", new Task() {
@@ -347,6 +349,10 @@ public final class MainActivity extends Activity {
                 "assets pykrita.py");
         appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_safe_import.py"),
                 "assets krita_probe_safe_import.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qapplication.py"),
+                "assets krita_probe_qapplication.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qapplication_import.py"),
+                "assets krita_probe_qapplication_import.py");
 
         report.append("\nDirectory libkrita entries:\n");
         File[] files = nativeDir.listFiles();

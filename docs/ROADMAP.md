@@ -519,6 +519,14 @@ resource servers без полноценного Krita application context. Сл
 заменить запускаемый manual. Packaging проверяет через `aapt2 dump badging`, что
 готовый APK действительно содержит launchable `MainActivity`.
 
+Планшетный тест v19 подтверждает всю подготовительную цепочку: native libraries,
+Python 3.14, `pykrita` helper и безопасное исполнение реального public wrapper без
+`Krita.instance()` проходят. Обычный `import krita` по-прежнему изолированно падает
+на `Krita.instance()` в Krita resource stack. Следующий слой `Krita Probe Manual v20`
+добавляет два child-process теста: создание настоящего Qt `QApplication` и затем
+`QApplication` плюс `import krita`. Это отделяет недостающий Qt application context
+от необходимости полного `KisApplication` startup с ресурсами и plugin loading.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
