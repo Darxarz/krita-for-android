@@ -22,6 +22,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
 pykrita_stub="$repo_root/probes/krita-python-runtime-payload/pykrita.py"
 safe_import_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_safe_import.py"
+probe_icon="$repo_root/probes/krita-python-runtime-launch-apk/res/drawable/ic_krita_probe.xml"
 
 test -d "$payload_dir/jniLibs/$abi"
 test -d "$payload_dir/assets/python"
@@ -30,6 +31,7 @@ test -f "$launcher_so"
 test -f "$cxx_shared_so"
 test -f "$pykrita_stub"
 test -f "$safe_import_probe"
+test -f "$probe_icon"
 test -f "$java_source_dir/org/krita/android/pythonruntimeprobe/MainActivity.java"
 test -f "$android_jar"
 test -x "$build_tools_dir/aapt2"
@@ -45,11 +47,14 @@ assets_dir="$work_dir/assets"
 native_lib_dir="$work_dir/lib/$abi"
 classes_dir="$work_dir/classes"
 dex_dir="$work_dir/dex"
-mkdir -p "$assets_dir" "$native_lib_dir" "$classes_dir" "$dex_dir"
+res_dir="$work_dir/res"
+compiled_res_dir="$work_dir/compiled-res"
+mkdir -p "$assets_dir" "$native_lib_dir" "$classes_dir" "$dex_dir" "$res_dir" "$compiled_res_dir"
 
 cp -a "$payload_dir/assets/python" "$assets_dir/"
 cp -a "$pykrita_stub" "$assets_dir/python/krita-python-libs/pykrita.py"
 cp -a "$safe_import_probe" "$assets_dir/python/krita-python-libs/krita_probe_safe_import.py"
+cp -a "$repo_root/probes/krita-python-runtime-launch-apk/res/." "$res_dir/"
 find "$payload_dir/jniLibs/$abi" -maxdepth 1 -type f \( -name "*.so" -o -name "*.so.*" \) \
     -exec cp -a {} "$native_lib_dir/" \;
 cp -a "$init_probe_so" "$native_lib_dir/libkrita_python_runtime_init_probe.so"
@@ -95,8 +100,8 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:targetSdkVersion="35" />
     <application
         android:extractNativeLibs="true"
-        android:icon="@android:drawable/sym_def_app_icon"
-        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:icon="@drawable/ic_krita_probe"
+        android:roundIcon="@drawable/ic_krita_probe"
         android:label="Krita Probe Manual v19"
         android:theme="@android:style/Theme.Material.Light">
         <activity
@@ -118,9 +123,14 @@ aligned_apk="$output_dir/krita-probe-manual-v19-${abi}-aligned.apk"
 signed_apk="$output_dir/krita-probe-manual-v19-${abi}.apk"
 keystore="$output_dir/debug.keystore"
 
+"$build_tools_dir/aapt2" compile \
+    --dir "$res_dir" \
+    -o "$compiled_res_dir"
+
 "$build_tools_dir/aapt2" link \
     --manifest "$work_dir/AndroidManifest.xml" \
     -I "$android_jar" \
+    -R "$compiled_res_dir"/*.flat \
     -A "$assets_dir" \
     -o "$unsigned_base_apk"
 
