@@ -107,6 +107,7 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:icon="@drawable/ic_krita_probe"
             android:label="Krita Probe Manual v19">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -166,6 +167,7 @@ grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='19' 
 grep -Fq "application: label='Krita Probe Manual v19'" "$output_dir/apk-badging.txt"
 grep -Eq "^application:.*icon='[^']+'" "$output_dir/apk-badging.txt"
 grep -Fq "launchable-activity: name='org.krita.android.pythonruntimeprobe.MainActivity'" "$output_dir/apk-badging.txt"
+grep -Eq "^launchable-activity:.*icon='[^']+'" "$output_dir/apk-badging.txt"
 
 zipinfo -1 "$signed_apk" | tee "$output_dir/apk-entries.txt"
 
