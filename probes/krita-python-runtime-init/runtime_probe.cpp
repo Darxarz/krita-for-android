@@ -291,6 +291,15 @@ int importOnePythonModuleFromPayload(const char *runtimeRoot, const char *module
         return -51;
     }
 
+    std::string probeResult;
+    PyObject *probeResultObject = PyObject_GetAttrString(module, "PROBE_RESULT");
+    if (probeResultObject) {
+        probeResult = pythonObjectToUtf8(probeResultObject);
+        Py_DECREF(probeResultObject);
+    } else {
+        PyErr_Clear();
+    }
+
     Py_DECREF(module);
 
     const int finalizeResult = Py_FinalizeEx();
@@ -303,6 +312,9 @@ int importOnePythonModuleFromPayload(const char *runtimeRoot, const char *module
 
     if (message) {
         *message = "OK: import " + std::string(moduleName);
+        if (!probeResult.empty()) {
+            *message += "\nprobe_result=" + probeResult;
+        }
     }
 
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG, "Python single import probe completed for %s", moduleName);
