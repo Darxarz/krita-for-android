@@ -1,0 +1,238 @@
+name: Krita real libs seed Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-real-libs-seed-android.yml"
+      - "probes/krita-real-libs-seed/**"
+      - "scripts/verify-krita-real-libs-seed.sh"
+      - "patches/krita/*.patch"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    name: Build real Krita seed libs ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            ninja-build \
+            libboost-dev \
+            libeigen3-dev \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libfribidi-dev \
+            libharfbuzz-dev \
+            libunibreak-dev \
+            libxsimd-dev
+
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Download Android PyQt5 dependency prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-deps-pyqt5-minimal-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          mkdir -p "$prefix"
+          gh run download "$run_id" \
+            --name "krita-deps-pyqt5-minimal-${{ matrix.abi }}" \
+            --dir "$prefix"
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a)
+              triplet="aarch64-linux-android"
+              machine_pattern="Machine:[[:space:]]*AArch64"
+              ;;
+            x86_64)
+              triplet="x86_64-linux-android"
+              machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
+              ;;
+          esac
+
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
+          echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
+
+          test -f "$prefix/include/python3.14/Python.h"
+          test -f "$prefix/lib/libpython3.14.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtCore/QtCore.toml"
+          test -d "$prefix/include/QtCore"
+          test -d "$prefix/include/QtGui"
+          test -d "$prefix/include/QtNetwork"
+          test -d "$prefix/include/QtWidgets"
+          test -d "$prefix/include/QtXml"
+          test -d "$prefix/include/QtSvg"
+          test -d "$prefix/include/QtConcurrent"
+          test -d "$prefix/include/QtSql"
+          test -d "$prefix/include/QtPrintSupport"
+          test -d "$prefix/include/QtAndroidExtras"
+          test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Gui_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Network_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Widgets_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Xml_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Svg_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Concurrent_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Sql_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5PrintSupport_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5AndroidExtras_${{ matrix.abi }}.so"
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          if ! git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita; then
+            rm -rf upstream/krita
+            git clone --depth 1 --filter=blob:none --sparse https://github.com/KDE/krita.git upstream/krita
+          fi
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            config-hdr.h.cmake \
+            config-ocio.h.cmake \
+            config_convolution.h.cmake \
+            config-hash-table-implementation.h.cmake \
+            config-qt-patches-present.h.cmake \
+            config-updaters.h.cmake \
+            config-use-surface-color-management-api.h.cmake \
+            KoConfig.h.cmake \
+            3rdparty_vendor/raqm \
+            cmake/modules \
+            config-android-stdio-forwarding.h.cmake \
+            config-gsl.h.cmake \
+            config-safe-asserts.h.cmake \
+            libs/brush \
+            libs/color \
+            libs/command \
+            libs/flake \
+            libs/global \
+            libs/image \
+            libs/impex \
+            libs/koplugin \
+            libs/libkis \
+            libs/metadata \
+            libs/multiarch \
+            libs/pigment \
+            libs/psdutils \
+            libs/resources \
+            libs/resourcewidgets \
+            libs/store \
+            libs/ui \
+            libs/version \
+            libs/widgets \
+            libs/widgetutils \
+            plugins/extensions/pykrita
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Configure real Krita seed libs
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+
+          cmake -S probes/krita-real-libs-seed \
+            -B build/krita-real-libs-seed/${{ matrix.abi }} \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_STL=c++_shared \
+            -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
+            -DANDROID_PREFIX="$prefix"
+
+      - name: Build and verify Krita seed libraries
+        run: |
+          set -eux
+
+          build_dir="build/krita-real-libs-seed/${{ matrix.abi }}"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          cmake --build "$build_dir" --target \
+            kritaversion \
+            kritaglobal \
+            kritaplugin \
+            kritamultiarch \
+            kritacolor \
+            kritastore \
+            kritaresources \
+            kritawidgetutils \
+            kritacommand \
+            kritapigment \
+            kritametadata \
+            kritaflake \
+            kritaresourcewidgets \
+            kritawidgets \
+            kritapsdutils \
+            kritaimage \
+            kritalibbrush \
+            kritaimpex \
+            kritaui \
+            kritalibkis \
+            python_module_PyKrita_krita \
+            kritapykrita \
+            --verbose
+
+          bash scripts/verify-krita-real-libs-seed.sh \
+            "$build_dir" \
+            "${{ matrix.abi }}" \
+            "$machine_pattern" \
+            "$readelf"
+
+      - name: Upload real Krita seed libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-real-libs-seed-${{ matrix.abi }}
+          path: build/krita-real-libs-seed/${{ matrix.abi }}

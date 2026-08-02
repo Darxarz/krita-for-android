@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 27 Jun 2026 00:00:00 +0000
+Subject: [PATCH] Use Krita operator names for Android PyKrita module
+
+The generated PyKrita module includes Krita color math headers that use method
+names such as xor, and and or. Android clang treats those names as alternative
+C++ operators unless operator names are disabled, so apply the same compile
+option to the full Android PyKrita SIP module target as the compile-only probe.
+---
+diff --git a/cmake/modules/SIPMacros.cmake b/cmake/modules/SIPMacros.cmake
+index c60d915..fd249a0 100644
+--- a/cmake/modules/SIPMacros.cmake
++++ b/cmake/modules/SIPMacros.cmake
+@@ -276,6 +276,10 @@ else()
+             target_link_libraries(${_logical_name} ${EXTRA_LINK_LIBRARIES})
+             set_target_properties(${_logical_name} PROPERTIES PREFIX "" OUTPUT_NAME ${_child_module_name})
+ 
++            if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++                target_compile_options(${_logical_name} PRIVATE -fno-operator-names)
++            endif()
++
+             if (MINGW)
+                 target_compile_definitions(${_logical_name} PRIVATE _hypot=hypot)
+             elseif(NOT MSVC)

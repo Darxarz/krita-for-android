@@ -1,0 +1,142 @@
+name: Krita PyKrita top-level configure Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-pykrita-top-level-configure-android.yml"
+      - "patches/krita/*.patch"
+
+jobs:
+  configure:
+    name: Configure PyKrita top-level ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            cmake/modules \
+            plugins/extensions/pykrita
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Create fake Android Python and PyQt prefix
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pykrita-top-level/${{ matrix.abi }}"
+          mkdir -p "$prefix/include/python3.14"
+          mkdir -p "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtCore"
+          mkdir -p "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtGui"
+          mkdir -p "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtXml"
+          mkdir -p "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtWidgets"
+
+          touch "$prefix/include/python3.14/Python.h"
+          touch "$prefix/lib/libpython3.14.so"
+          touch "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtCore/QtCore.toml"
+          touch "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtGui/QtGui.toml"
+          touch "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtXml/QtXml.toml"
+          touch "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtWidgets/QtWidgets.toml"
+
+      - name: Configure PyKrita top-level probe
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pykrita-top-level/${{ matrix.abi }}"
+          mkdir -p probe
+
+          cat > probe/CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.21)
+          project(pykrita_top_level_probe CXX)
+
+          set(ANDROID TRUE)
+          set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
+          set(KRITA_ANDROID_PYKRITA_GENERATE_ONLY ON)
+          set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
+          set(QT_MAJOR_VERSION 5)
+          set(KDE_INSTALL_LIBDIR "lib")
+          set(KRITA_PLUGIN_INSTALL_DIR "lib/krita/plugins")
+
+          set(HAVE_PYQT5 TRUE)
+          set(HAVE_SIP TRUE)
+          set(HAVE_PYTHONLIBS TRUE)
+          set(SIP_VERSION 060a00)
+          set(SIP_VERSION_STR 6.10.0)
+          set(SIP_EXECUTABLE sip-build)
+          set(PYTHON_INCLUDE_PATH "${ANDROID_PREFIX}/include/python3.14")
+          set(PYTHON_INCLUDE_DIRS "${ANDROID_PREFIX}/include/python3.14")
+          set(PYTHON_LIBRARY "${ANDROID_PREFIX}/lib/libpython3.14.so")
+          set(PYQT_SIP_NAME PyQt5.sip)
+          set(PYQT_SIP_TAGS Qt_5_15_2)
+          set(PYQT_SIP_DIR "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings")
+
+          function(ki18n_wrap_ui output_variable)
+              set(${output_variable} "${${output_variable}}" PARENT_SCOPE)
+          endfunction()
+
+          function(kis_add_library target_name)
+              set(_args ${ARGN})
+              list(LENGTH _args _arg_count)
+              if(_arg_count GREATER 0)
+                  list(GET _args 0 _library_type)
+                  if(_library_type STREQUAL "STATIC" OR _library_type STREQUAL "SHARED" OR _library_type STREQUAL "MODULE")
+                      list(REMOVE_AT _args 0)
+                  endif()
+              endif()
+              add_library(${target_name} STATIC EXCLUDE_FROM_ALL ${_args})
+          endfunction()
+
+          foreach(_target kritaui kritalibkis kritaimage kritalibbrush)
+              add_library(${_target} INTERFACE)
+          endforeach()
+
+          add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita" pykrita-top-level)
+
+          foreach(_target
+                  python_module_PyKrita_krita_sip_generate
+                  pykrita
+                  kritapykrita)
+              if(NOT TARGET ${_target})
+                  message(FATAL_ERROR "Expected target was not created: ${_target}")
+              endif()
+          endforeach()
+
+          if(TARGET kritarunner)
+              message(FATAL_ERROR "kritarunner should be skipped for Android PyKrita experiments")
+          endif()
+
+          message(STATUS "Android PyKrita top-level configure probe passed")
+          CMAKE
+
+          cmake -S probe -B build/pykrita-top-level/${{ matrix.abi }} \
+            -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
+            -DANDROID_PREFIX="$prefix"

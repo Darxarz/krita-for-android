@@ -1,0 +1,47 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 26 Jun 2026 00:00:00 +0000
+Subject: [PATCH] Add Android PyKrita SIP compile-only mode
+
+Let Android experimental PyKrita builds compile generated SIP 5+ sources as
+object files without linking the final Python module. This keeps the probe
+narrow: it validates the Android compiler, target Python headers, SIP support
+headers, PyQt usage requirements, and Krita include surface before the full
+kritapykrita link step is attempted.
+---
+diff --git a/cmake/modules/SIPMacros.cmake b/cmake/modules/SIPMacros.cmake
+index 6eb7c18..c60d915 100644
+--- a/cmake/modules/SIPMacros.cmake
++++ b/cmake/modules/SIPMacros.cmake
+@@ -243,9 +243,30 @@ else()
+                 ${_sip_output_files} ${_complete_stubs}
+         )
+ 
+-        if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL AND KRITA_ANDROID_PYKRITA_GENERATE_ONLY)
++        set(_android_pykrita_generate_only FALSE)
++        set(_android_pykrita_compile_only FALSE)
++        if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++            if(KRITA_ANDROID_PYKRITA_GENERATE_ONLY AND KRITA_ANDROID_PYKRITA_COMPILE_ONLY)
++                message(FATAL_ERROR "KRITA_ANDROID_PYKRITA_GENERATE_ONLY and KRITA_ANDROID_PYKRITA_COMPILE_ONLY cannot both be enabled")
++            endif()
++            set(_android_pykrita_generate_only ${KRITA_ANDROID_PYKRITA_GENERATE_ONLY})
++            set(_android_pykrita_compile_only ${KRITA_ANDROID_PYKRITA_COMPILE_ONLY})
++        endif()
++
++        if(_android_pykrita_generate_only)
+             add_custom_target(${_logical_name}_sip_generate ALL
+                 DEPENDS ${_sip_output_files} ${_complete_stubs})
++        elseif(_android_pykrita_compile_only)
++            add_library(${_logical_name}_sip_objects OBJECT ${_sip_output_files})
++            target_include_directories(${_logical_name}_sip_objects PRIVATE
++                ${CMAKE_CURRENT_SIP_OUTPUT_DIR}
++                ${PYTHON_INCLUDE_DIRS})
++            target_link_libraries(${_logical_name}_sip_objects PRIVATE ${EXTRA_LINK_LIBRARIES})
++            target_compile_options(${_logical_name}_sip_objects PRIVATE
++                -fno-operator-names)
++            target_compile_definitions(${_logical_name}_sip_objects PRIVATE
++                SIP_PROTECTED_IS_PUBLIC
++                protected=public)
+         else()
+             # not sure if type MODULE could be usec anywhere, limit to cygwin for now
+             if (WIN32 OR CYGWIN OR APPLE)

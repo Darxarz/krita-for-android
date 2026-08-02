@@ -1,0 +1,15 @@
+diff --git a/libs/widgets/KoZoomActionState.cpp b/libs/widgets/KoZoomActionState.cpp
+index 0f505f1..7e46b0a 100644
+--- a/libs/widgets/KoZoomActionState.cpp
++++ b/libs/widgets/KoZoomActionState.cpp
+@@ -135,7 +135,9 @@ int KoZoomActionState::calcNearestStandardLevel(qreal zoom) const
+     auto it = std::lower_bound(standardLevels.begin(), standardLevels.end(),
+                                zoom, fuzzyCompareLess);
+ 
+-    return qMin(standardLevels.size() - 1, std::distance(standardLevels.begin(), it));
++    const int maxIndex = standardLevels.size() - 1;
++    const int nearestIndex = static_cast<int>(std::distance(standardLevels.begin(), it));
++    return qMin(maxIndex, nearestIndex);
+ }
+ 
+ int KoZoomActionState::calcNearestStandardLevel() const

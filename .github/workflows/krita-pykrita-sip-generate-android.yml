@@ -1,0 +1,127 @@
+name: Krita PyKrita SIP generate Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-pykrita-sip-generate-android.yml"
+      - "patches/krita/*.patch"
+
+jobs:
+  generate:
+    name: Generate PyKrita SIP ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0" "PyQt5==5.15.11"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            cmake/modules \
+            plugins/extensions/pykrita
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Create fake Android prefix with PyQt SIP metadata
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pykrita-sip-generate/${{ matrix.abi }}"
+          host_python_minor="$(python3 - <<'PY'
+          import sys
+          print(f"{sys.version_info.major}.{sys.version_info.minor}")
+          PY
+          )"
+          pyqt5_dir="$(python3 - <<'PY'
+          import pathlib
+          import PyQt5
+          print(pathlib.Path(PyQt5.__file__).parent)
+          PY
+          )"
+
+          mkdir -p "$prefix/include/python3.14"
+          mkdir -p "$prefix/lib/python3.14/site-packages/PyQt5"
+          mkdir -p "$prefix/lib/python${host_python_minor}/site-packages"
+
+          touch "$prefix/include/python3.14/Python.h"
+          touch "$prefix/lib/libpython3.14.so"
+          cp -a "$pyqt5_dir/bindings" "$prefix/lib/python3.14/site-packages/PyQt5/"
+
+      - name: Configure PyKrita SIP generation probe
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pykrita-sip-generate/${{ matrix.abi }}"
+          mkdir -p probe
+
+          cat > probe/CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.21)
+          project(pykrita_sip_generate_probe NONE)
+
+          set(ANDROID TRUE)
+          set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
+          set(KRITA_ANDROID_PYKRITA_GENERATE_ONLY ON)
+          set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
+          set(CMAKE_PREFIX_PATH "${ANDROID_PREFIX}")
+          set(KDE_INSTALL_LIBDIR "lib")
+          set(QT_MAJOR_VERSION 5)
+
+          find_package(PythonLibrary 3.8 REQUIRED)
+          find_package(SIP "4.19.13" REQUIRED)
+          find_package(PyQt5 "5.6.0" REQUIRED)
+
+          set(PYQT_VERSION_TAG ${PYQT5_VERSION_TAG})
+          set(PYQT_SIP_NAME ${PYQT5_SIP_NAME})
+          set(PYQT_SIP_TAGS ${PYQT5_SIP_TAGS})
+          set(PYQT_SIP_DIR ${PYQT5_SIP_DIR})
+
+          add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/sip" pykrita-sip)
+          CMAKE
+
+          cmake -S probe -B build/pykrita-sip-generate/${{ matrix.abi }} \
+            -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
+            -DANDROID_PREFIX="$prefix"
+
+      - name: Generate PyKrita SIP sources
+        run: |
+          set -eux
+
+          build_dir="build/pykrita-sip-generate/${{ matrix.abi }}"
+          cmake --build "$build_dir" --target python_module_PyKrita_krita_sip_generate --verbose
+
+          test -f "$build_dir/pykrita-sip/_tmp/krita/sipkritapart0.cpp"
+          test -f "$build_dir/pykrita-sip/_tmp/krita/krita_complete.pyi"
+          grep -q "PyKrita" "$build_dir/pykrita-sip/_tmp/krita/sipkritapart0.cpp"
+
+      - name: Upload generated PyKrita SIP sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pykrita-sip-generated-${{ matrix.abi }}
+          path: build/pykrita-sip-generate/${{ matrix.abi }}/pykrita-sip/_tmp/krita

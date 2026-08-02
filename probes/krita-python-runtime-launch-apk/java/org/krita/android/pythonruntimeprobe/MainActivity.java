@@ -1,0 +1,725 @@
+package org.krita.android.pythonruntimeprobe;
+
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.res.AssetManager;
+import android.graphics.Color;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+public final class MainActivity extends Activity {
+    private static final String TAG = "KritaPyRuntimeProbe";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v22";
+
+    private static native String runInitProbe(String runtimeRoot);
+    private static native String runImportProbe(String runtimeRoot);
+    private static native String runImportOneProbe(String runtimeRoot, String moduleName);
+    private static native String runChildImportOneProbe(String runtimeRoot, String moduleName);
+    private static native String runChildDlopenPyKritaProbe(String runtimeRoot);
+    private static native String runChildDlopenPathProbe(String libraryPath);
+
+    private TextView statusView;
+    private TextView logView;
+    private volatile boolean qtCoreLibraryLoaded;
+    private volatile boolean pythonLibraryLoaded;
+    private volatile boolean initProbeLibraryLoaded;
+    private volatile boolean launcherLibraryLoaded;
+    private volatile boolean taskRunning;
+    private volatile String lastShortStatus = "not started";
+    private final StringBuilder logBuffer = new StringBuilder();
+    private long lastProgressUpdateMs;
+    private int uiClickCount;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setTitle(SCREEN_TITLE);
+        org.qtproject.qt5.android.QtNative.setActivityForProbe(this);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setFillViewport(true);
+        scrollView.setBackgroundColor(Color.WHITE);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(32, 32, 32, 32);
+        root.setBackgroundColor(Color.WHITE);
+
+        statusView = new TextView(this);
+        statusView.setTextColor(Color.rgb(20, 20, 20));
+        statusView.setBackgroundColor(Color.WHITE);
+        statusView.setGravity(Gravity.START | Gravity.TOP);
+        statusView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        statusView.setMinLines(8);
+        statusView.setTextIsSelectable(true);
+        root.addView(statusView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        root.addView(makeUiTestButton());
+        root.addView(makeCopyLogButton());
+
+        root.addView(makeButton("1a. Load libpython only", new Task() {
+            @Override
+            public void run() {
+                loadPythonLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1b. Load init probe", new Task() {
+            @Override
+            public void run() {
+                loadInitProbeLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1c. Load launcher", new Task() {
+            @Override
+            public void run() {
+                loadLauncherLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1q. Load QtCore via Java QtNative", new Task() {
+            @Override
+            public void run() {
+                loadQtCoreLibraryIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("1. Load all native libraries", new Task() {
+            @Override
+            public void run() {
+                loadAllNativeLibrariesIfNeeded();
+            }
+        }));
+
+        root.addView(makeButton("2. Copy runtime payload", new Task() {
+            @Override
+            public void run() throws IOException {
+                copyPayloadIfNeeded(false);
+            }
+        }));
+
+        root.addView(makeButton("3. Run PyConfig init", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running PyConfig init probe...");
+                showResult(runInitProbe(runtimeRoot().getAbsolutePath()));
+            }
+        }));
+
+        root.addView(makeImportOneButton("4a. Import sys", "sys"));
+        root.addView(makeImportOneButton("4b. Import PyQt5.QtCore", "PyQt5.QtCore"));
+        root.addView(makeChildImportOneButton("4b1. Child import PyQt5.QtGui", "PyQt5.QtGui"));
+        root.addView(makeChildImportOneButton("4b2. Child import PyQt5.QtWidgets", "PyQt5.QtWidgets"));
+        root.addView(makeChildImportOneButton("4b3. Child import PyQt5.QtXml", "PyQt5.QtXml"));
+        root.addView(makeChildDlopenNativeButton("4b4. Child dlopen QtWidgets", qtLibraryName("Widgets")));
+        root.addView(makeChildDlopenNativeButton("4b5. Child dlopen QtXml", qtLibraryName("Xml")));
+        root.addView(makeNativeInventoryButton());
+        root.addView(makeChildDlopenNativeButton("4c0a. Child dlopen libkritalibbrush", "libkritalibbrush.so"));
+        root.addView(makeChildDlopenNativeButton("4c0b. Child dlopen libkritaimage", "libkritaimage.so"));
+        root.addView(makeChildDlopenNativeButton("4c0c. Child dlopen libkritaui", "libkritaui.so"));
+        root.addView(makeChildDlopenNativeButton("4c0d. Child dlopen libkritalibkis", "libkritalibkis.so"));
+        root.addView(makeChildDlopenNativeButton("4c0e. Child dlopen libkritapykrita", "libkritapykrita.so"));
+        root.addView(makeChildDlopenPyKritaButton());
+        root.addView(makeChildImportOneButton("4c1. Child import PyKrita.krita", "PyKrita.krita"));
+        root.addView(makeImportOneButton("4cZ. Import PyKrita.krita crash test", "PyKrita.krita"));
+        root.addView(makeImportOneButton("4d0. Import pykrita helper", "pykrita"));
+        root.addView(makeChildImportOneButton("4d. Child import krita", "krita"));
+        root.addView(makeChildImportOneButton("4d1. Child safe krita bootstrap", "krita_probe_safe_import"));
+        root.addView(makeChildImportOneButton("4d2. Child create QApplication", "krita_probe_qapplication"));
+        root.addView(makeChildImportOneButton("4d3. Child QApplication then krita", "krita_probe_qapplication_import"));
+        root.addView(makeChildImportOneButton("4d4. Child create QCoreApplication", "krita_probe_qcoreapplication"));
+        root.addView(makeChildImportOneButton("4d5. Child QCoreApplication then krita", "krita_probe_qcoreapplication_import"));
+        root.addView(makeImportOneButton("4dZ. Import krita crash test", "krita"));
+
+        root.addView(makeButton("4z. Import all Python modules crash test", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running combined Python import probe...");
+                showResult(runImportProbe(runtimeRoot().getAbsolutePath()));
+            }
+        }));
+
+        root.addView(makeButton("Run setup sequence", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                copyPayloadIfNeeded(false);
+                showStep("Running PyConfig init probe...");
+                showResult(runInitProbe(runtimeRoot().getAbsolutePath()));
+            }
+        }));
+
+        root.addView(makeButton("Reset copied payload", new Task() {
+            @Override
+            public void run() throws IOException {
+                showStep("Deleting app-private Python payload...");
+                deleteTree(runtimeRoot());
+                showStep("Payload deleted. No heavy task is running.");
+            }
+        }));
+
+        logView = new TextView(this);
+        logView.setTextColor(Color.rgb(30, 30, 30));
+        logView.setBackgroundColor(Color.rgb(245, 245, 245));
+        logView.setGravity(Gravity.START | Gravity.TOP);
+        logView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        logView.setPadding(16, 16, 16, 16);
+        logView.setTextIsSelectable(true);
+        LinearLayout.LayoutParams logParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        logParams.setMargins(0, 20, 0, 0);
+        root.addView(logView, logParams);
+
+        scrollView.addView(root);
+        setContentView(scrollView);
+
+        showStep("Idle. No heavy task is running.\n\n"
+                + "First press 'UI click test'. It does not load Python or copy files.");
+    }
+
+    private Button makeUiTestButton() {
+        final Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText("UI click test");
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 12, 0, 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                uiClickCount++;
+                String message = SCREEN_TITLE + "\n\nUI click received: " + uiClickCount
+                        + "\nNo native libraries loaded. No payload copied.";
+                showResult(message);
+                button.setText("UI click test: " + uiClickCount);
+                Toast.makeText(MainActivity.this, "UI click " + uiClickCount, Toast.LENGTH_SHORT).show();
+            }
+        });
+        return button;
+    }
+
+    private Button makeCopyLogButton() {
+        final Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText("Copy persistent log");
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 12, 0, 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                copyTextToClipboard("Krita Probe persistent log", persistentLogText());
+                Toast.makeText(MainActivity.this, "Persistent log copied", Toast.LENGTH_SHORT).show();
+            }
+        });
+        return button;
+    }
+
+    private Button makeImportOneButton(String label, final String moduleName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running single import probe: " + moduleName);
+                showResult(runImportOneProbe(runtimeRoot().getAbsolutePath(), moduleName));
+            }
+        });
+    }
+
+    private Button makeChildImportOneButton(String label, final String moduleName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running child import probe: " + moduleName);
+                showResult(runChildImportOneProbe(runtimeRoot().getAbsolutePath(), moduleName));
+            }
+        });
+    }
+
+    private Button makeChildDlopenPyKritaButton() {
+        return makeButton("4c0. Child dlopen PyKrita.krita", new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                showStep("Running child dlopen probe: PyKrita.krita");
+                showResult(runChildDlopenPyKritaProbe(runtimeRoot().getAbsolutePath()));
+            }
+        });
+    }
+
+    private Button makeChildDlopenNativeButton(String label, final String libraryName) {
+        return makeButton(label, new Task() {
+            @Override
+            public void run() throws IOException {
+                loadNativeLibrariesIfNeeded();
+                requirePayload();
+                File library = new File(getApplicationInfo().nativeLibraryDir, libraryName);
+                showStep("Running child dlopen probe: " + libraryName + "\n" + library.getAbsolutePath());
+                showResult(runChildDlopenPathProbe(library.getAbsolutePath()));
+            }
+        });
+    }
+
+    private Button makeNativeInventoryButton() {
+        return makeButton("4cI. Native library inventory", new Task() {
+            @Override
+            public void run() throws IOException {
+                requirePayload();
+                showResult(nativeInventoryReport());
+            }
+        });
+    }
+
+    private static String qtLibraryName(String moduleName) {
+        return "libQt5" + moduleName + "_" + primaryAbi() + ".so";
+    }
+
+    private static String primaryAbi() {
+        if (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0) {
+            return Build.SUPPORTED_ABIS[0];
+        }
+        return "arm64-v8a";
+    }
+
+    private String nativeInventoryReport() {
+        String[] expected = new String[] {
+                "libpython3.14.so",
+                "libc++_shared.so",
+                qtLibraryName("Core"),
+                qtLibraryName("Gui"),
+                qtLibraryName("Widgets"),
+                qtLibraryName("Xml"),
+                "libkritalibbrush.so",
+                "libkritaimage.so",
+                "libkritaui.so",
+                "libkritalibkis.so",
+                "libkritapykrita.so",
+                "libkrita_python_runtime_init_probe.so",
+                "libkrita_python_runtime_launcher.so",
+        };
+
+        File nativeDir = new File(getApplicationInfo().nativeLibraryDir);
+        StringBuilder report = new StringBuilder();
+        report.append(SCREEN_TITLE).append("\n\n");
+        report.append("nativeLibraryDir=").append(nativeDir.getAbsolutePath()).append('\n');
+        report.append("primaryAbi=").append(primaryAbi()).append('\n');
+        report.append("supportedAbis=").append(joinSupportedAbis()).append("\n\n");
+
+        for (String name : expected) {
+            appendFileLine(report, new File(nativeDir, name), name);
+        }
+
+        File pykrita = new File(runtimeRoot(), "assets/python/krita-python-libs/PyKrita/krita.so");
+        report.append('\n');
+        appendFileLine(report, pykrita, "assets PyKrita/krita.so");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/pykrita.py"),
+                "assets pykrita.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_safe_import.py"),
+                "assets krita_probe_safe_import.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qapplication.py"),
+                "assets krita_probe_qapplication.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qapplication_import.py"),
+                "assets krita_probe_qapplication_import.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qcoreapplication.py"),
+                "assets krita_probe_qcoreapplication.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qcoreapplication_import.py"),
+                "assets krita_probe_qcoreapplication_import.py");
+        appendFileLine(report, qtAndroidPlatformPlugin(),
+                "assets Qt Android platform plugin");
+
+        report.append("\nDirectory libkrita entries:\n");
+        File[] files = nativeDir.listFiles();
+        if (files == null) {
+            report.append("listFiles=null\n");
+        } else {
+            int count = 0;
+            for (File file : files) {
+                String name = file.getName();
+                if (name.startsWith("libkrita") || name.startsWith("libQt5")) {
+                    report.append(name).append(" size=").append(file.length()).append('\n');
+                    count++;
+                }
+            }
+            report.append("matched=").append(count).append('\n');
+        }
+
+        return report.toString();
+    }
+
+    private static String joinSupportedAbis() {
+        if (Build.SUPPORTED_ABIS == null || Build.SUPPORTED_ABIS.length == 0) {
+            return "none";
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (int index = 0; index < Build.SUPPORTED_ABIS.length; index++) {
+            if (index > 0) {
+                result.append(',');
+            }
+            result.append(Build.SUPPORTED_ABIS[index]);
+        }
+        return result.toString();
+    }
+
+    private static void appendFileLine(StringBuilder report, File file, String label) {
+        report.append(label)
+                .append(" exists=").append(file.isFile())
+                .append(" size=").append(file.isFile() ? file.length() : -1)
+                .append(" path=").append(file.getAbsolutePath())
+                .append('\n');
+    }
+
+    private Button makeButton(String label, final Task task) {
+        final Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, 12, 0, 0);
+        button.setLayoutParams(params);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String clicked = SCREEN_TITLE + "\n\nClicked: " + label
+                        + "\nTask will start in 750 ms.";
+                showResult(clicked);
+                button.setText(label + "\nRUNNING...");
+                button.setEnabled(false);
+                Toast.makeText(MainActivity.this, "Clicked: " + label, Toast.LENGTH_SHORT).show();
+
+                button.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        startTask(label, task, button);
+                    }
+                }, 750);
+            }
+        });
+        return button;
+    }
+
+    private void startTask(final String label, final Task task, final Button button) {
+        if (taskRunning) {
+            showStep("A task is already running. Wait for it to finish.");
+            button.setText(label);
+            button.setEnabled(true);
+            return;
+        }
+
+        taskRunning = true;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final String[] failure = new String[1];
+                try {
+                    task.run();
+                } catch (Throwable error) {
+                    failure[0] = error.toString();
+                    Log.e(TAG, "Runtime probe task failed", error);
+                    showResult("FAILED: " + error);
+                } finally {
+                    taskRunning = false;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (failure[0] == null) {
+                                button.setText(label + "\nDONE: " + lastShortStatus);
+                            } else {
+                                button.setText(label + "\nFAILED: " + shorten(failure[0]));
+                            }
+                            button.setEnabled(true);
+                        }
+                    });
+                }
+            }
+        }, "krita-python-runtime-probe").start();
+    }
+
+    private synchronized void loadNativeLibrariesIfNeeded() {
+        loadAllNativeLibrariesIfNeeded();
+    }
+
+    private synchronized void loadAllNativeLibrariesIfNeeded() {
+        loadQtCoreLibraryIfNeeded();
+        loadPythonLibraryIfNeeded();
+        loadInitProbeLibraryIfNeeded();
+        loadLauncherLibraryIfNeeded();
+        showStep("All native libraries loaded OK.");
+    }
+
+    private synchronized void loadQtCoreLibraryIfNeeded() {
+        if (qtCoreLibraryLoaded) {
+            showStep(qtLibraryName("Core") + " already loaded through Java.");
+            return;
+        }
+
+        loadNativeLibrary(qtLibraryName("Core"));
+        qtCoreLibraryLoaded = true;
+    }
+
+    private synchronized void loadPythonLibraryIfNeeded() {
+        if (pythonLibraryLoaded) {
+            showStep("libpython3.14.so already loaded.");
+            return;
+        }
+
+        loadNativeLibrary("libpython3.14.so");
+        pythonLibraryLoaded = true;
+    }
+
+    private synchronized void loadInitProbeLibraryIfNeeded() {
+        loadPythonLibraryIfNeeded();
+        if (initProbeLibraryLoaded) {
+            showStep("libkrita_python_runtime_init_probe.so already loaded.");
+            return;
+        }
+
+        loadNativeLibrary("libkrita_python_runtime_init_probe.so");
+        initProbeLibraryLoaded = true;
+    }
+
+    private synchronized void loadLauncherLibraryIfNeeded() {
+        loadInitProbeLibraryIfNeeded();
+        if (launcherLibraryLoaded) {
+            showStep("libkrita_python_runtime_launcher.so already loaded.");
+            return;
+        }
+
+        loadNativeLibrary("libkrita_python_runtime_launcher.so");
+        launcherLibraryLoaded = true;
+    }
+
+    private void loadNativeLibrary(String fileName) {
+        File library = new File(getApplicationInfo().nativeLibraryDir, fileName);
+        showStep("Loading " + fileName + "\n" + library.getAbsolutePath());
+        sleepBeforeNativeLoad();
+        System.load(library.getAbsolutePath());
+        showStep("Loaded " + fileName + " OK.");
+    }
+
+    private void sleepBeforeNativeLoad() {
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void copyPayloadIfNeeded(boolean force) throws IOException {
+        File runtimeRoot = runtimeRoot();
+        File sentinel = payloadSentinel();
+        File qtPlatformPlugin = qtAndroidPlatformPlugin();
+
+        if (force || !sentinel.isFile() || !qtPlatformPlugin.isFile()) {
+            showStep("Preparing private runtime directory...");
+            deleteTree(runtimeRoot);
+
+            lastProgressUpdateMs = 0;
+            CopyStats stats = new CopyStats();
+            showStep("Copying runtime payload from APK assets. This is the heavy step.");
+            copyAssetTree(getAssets(), "python", pythonAssetsRoot(), stats);
+            copyAssetTree(getAssets(), "qt", qtAssetsRoot(), stats);
+            if (!sentinel.createNewFile()) {
+                throw new IOException("Could not write payload sentinel");
+            }
+            showStep("Runtime payload copied.");
+            return;
+        }
+
+        showStep("Runtime payload already copied. Reusing app-private storage.");
+    }
+
+    private void requirePayload() throws IOException {
+        if (!payloadSentinel().isFile() || !qtAndroidPlatformPlugin().isFile()) {
+            throw new IOException("Runtime payload is not copied yet. Press 'Copy runtime payload' first.");
+        }
+    }
+
+    private File runtimeRoot() {
+        return new File(getFilesDir(), "krita-python-runtime");
+    }
+
+    private File pythonAssetsRoot() {
+        return new File(runtimeRoot(), "assets/python");
+    }
+
+    private File qtAssetsRoot() {
+        return new File(runtimeRoot(), "assets/qt");
+    }
+
+    private File qtAndroidPlatformPlugin() {
+        return new File(qtAssetsRoot(), "plugins/platforms/libplugins_platforms_qtforandroid_"
+                + primaryAbi() + ".so");
+    }
+
+    private File payloadSentinel() {
+        return new File(runtimeRoot(), ".payload_complete");
+    }
+
+    private void showStep(String message) {
+        showResult(SCREEN_TITLE + "\n\n" + message);
+    }
+
+    private void showResult(final String message) {
+        final String strippedMessage = stripScreenTitle(message);
+        lastShortStatus = shorten(strippedMessage);
+        Log.i(TAG, message);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                statusView.setText(message);
+                appendLogLine(strippedMessage);
+            }
+        });
+    }
+
+    private synchronized String persistentLogText() {
+        return "Persistent log:\n" + logBuffer;
+    }
+
+    private void copyTextToClipboard(String label, String text) {
+        ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard == null) {
+            showResult("FAILED: Clipboard service is not available");
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text));
+    }
+
+    private synchronized void appendLogLine(String line) {
+        if (logView == null) {
+            return;
+        }
+
+        logBuffer.append(line).append('\n');
+        while (logBuffer.length() > 80000) {
+            int newline = logBuffer.indexOf("\n");
+            if (newline < 0) {
+                logBuffer.setLength(0);
+                break;
+            }
+            logBuffer.delete(0, newline + 1);
+        }
+
+        logView.setText(persistentLogText());
+    }
+
+    private static String stripScreenTitle(String message) {
+        if (message.startsWith(SCREEN_TITLE)) {
+            String stripped = message.substring(SCREEN_TITLE.length()).trim();
+            return stripped.length() == 0 ? message : stripped;
+        }
+        return message;
+    }
+
+    private static String shorten(String value) {
+        String normalized = value.replace('\n', ' ').replace('\r', ' ').trim();
+        return normalized.length() <= 90 ? normalized : normalized.substring(0, 87) + "...";
+    }
+
+    private void showCopyProgress(String assetPath, CopyStats stats) {
+        long now = System.currentTimeMillis();
+        if (now - lastProgressUpdateMs < 500) {
+            return;
+        }
+
+        lastProgressUpdateMs = now;
+        showStep("Copying runtime payload...\nfiles=" + stats.files
+                + "\nbytes=" + stats.bytes
+                + "\ncurrent=" + assetPath);
+    }
+
+    private void copyAssetTree(AssetManager assets, String assetPath, File target, CopyStats stats) throws IOException {
+        String[] children = assets.list(assetPath);
+        if (children != null && children.length > 0) {
+            if (!target.isDirectory() && !target.mkdirs()) {
+                throw new IOException("Could not create directory " + target);
+            }
+            for (String child : children) {
+                copyAssetTree(assets, assetPath + "/" + child, new File(target, child), stats);
+            }
+            return;
+        }
+
+        File parent = target.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+            throw new IOException("Could not create directory " + parent);
+        }
+
+        byte[] buffer = new byte[64 * 1024];
+        try (InputStream input = assets.open(assetPath);
+             OutputStream output = new FileOutputStream(target)) {
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                output.write(buffer, 0, count);
+                stats.bytes += count;
+            }
+        }
+
+        stats.files++;
+        showCopyProgress(assetPath, stats);
+    }
+
+    private static void deleteTree(File path) throws IOException {
+        if (!path.exists()) {
+            return;
+        }
+
+        File[] children = path.listFiles();
+        if (children != null) {
+            for (File child : children) {
+                deleteTree(child);
+            }
+        }
+
+        if (!path.delete()) {
+            throw new IOException("Could not delete " + path);
+        }
+    }
+
+    private interface Task {
+        void run() throws Exception;
+    }
+
+    private static final class CopyStats {
+        long files;
+        long bytes;
+    }
+}

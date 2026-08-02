@@ -56,16 +56,57 @@ Run: https://github.com/Darxarz/krita-for-android/actions/runs/28191619971
 dependency prefix для `arm64-v8a` и `x86_64`; `sipbuild` и `pyqtbuild` импортируются через
 host Python, а target `libpython3.14.so` остаётся в этом же prefix.
 
+Следующий слой: `ext_pyqt5-sip`. Добавлен patch-кандидат
+`0004-build-pyqt5-sip-for-android.patch`, который не запускает host `pip install` для
+target module, а собирает `PyQt5/sip.cpython-314-<triplet>.so` через NDK CMake sub-build
+и устанавливает `sip.h` в Android Python include-prefix.
+
+CI `Krita deps PyQt5 SIP Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28192903905
+
+Проверено: артефакты `krita-deps-pyqt5-sip-arm64-v8a` и
+`krita-deps-pyqt5-sip-x86_64` содержат target Android extension module
+`PyQt5/sip.cpython-314-<triplet>.so`; workflow проверяет ELF machine type и зависимость
+от `libpython3.14.so`.
+
+Следующий слой: минимальный `ext_pyqt5` для Android. Добавлен patch-кандидат
+`0005-build-minimal-pyqt5-for-android.patch`, который вводит Android-only recipe для
+`ext_pyqt5`: `sip-build` получает target Python 3.14 настройки через `pyproject.toml`,
+использует Android `qmake`, явно включает только `QtCore`, `QtNetwork`, `QtGui` и
+`QtXml` и `QtWidgets`, а после установки переименовывает host-style extension suffix в Android
+suffix `cpython-314-<triplet>`.
+
+Добавлен CI probe `Krita deps PyQt5 minimal Android`. Для скорости он подкладывает готовый
+Qt for Android через `aqtinstall`, а затем собирает уже проверенные Python/SIP слои и
+пробует минимальный PyQt5 runtime. Это проверка сборочного рецепта; полноценная интеграция
+с upstream `ext_qt` остается отдельным шагом.
+
+CI `Krita deps PyQt5 minimal Android` зелёный. После PyKrita SIP import analysis в
+минимальный набор добавлен `QtXml`, потому что upstream `kritamod.sip` импортирует
+`QtXml/QtXmlmod.sip`.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28239107004
+
+Проверено: артефакты `krita-deps-pyqt5-minimal-arm64-v8a` и
+`krita-deps-pyqt5-minimal-x86_64` содержат Android target modules
+`PyQt5/sip.cpython-314-<triplet>.so`, `QtCore`, `QtNetwork`, `QtGui`, `QtXml` и `QtWidgets`.
+Workflow проверяет ELF machine type, зависимость от `libpython3.14.so` и наличие SIP
+metadata `PyQt5/bindings/QtCore/QtCore.toml`.
+
 Нужно разделить две роли Python:
 
 - host Python: запускается на Linux runner и генерирует SIP/PyQt metadata;
 - target Python: Android `libpython`, headers и extension modules, с которыми линкуется
   Krita и которые попадут в APK.
 
-Критерий готовности: Android deps содержат PyQt5 runtime modules и SIP metadata достаточно
-полные, чтобы Krita смогла собрать `plugins/extensions/pykrita/sip`.
+Критерий готовности выполнен для минимального PyQt5 runtime: Android deps содержат PyQt5
+runtime modules и SIP metadata достаточно полные, чтобы перейти к сборке
+`plugins/extensions/pykrita/sip`.
 
 ## Phase 3 - PyKrita в Android-сборке Krita
+
+Статус: начат patch-кандидат для upstream Krita.
 
 Нужно поправить CMake discovery:
 
@@ -73,6 +114,220 @@ host Python, а target `libpython3.14.so` остаётся в этом же pref
 - `FindPyQt5.cmake` не должен пытаться импортировать target Android PyQt на host runner;
 - `plugins/extensions/pykrita` должен собираться для Android только в экспериментальном
   режиме, например через `-DENABLE_ANDROID_PYKRITA_EXPERIMENTAL=ON`.
+
+Добавлен patch-кандидат `patches/krita/0001-enable-android-pykrita-discovery.patch`.
+Он вводит Android-only option `ENABLE_ANDROID_PYKRITA_EXPERIMENTAL` и ручной discovery
+target Python/PyQt5 из Android dependency prefix. Host Python по-прежнему используется
+только для запуска SIP tooling, а target Android `PyQt5.QtCore` не импортируется на host.
+
+Добавлен CI probe `Krita PyKrita discovery Android`. Он применяет Krita patch к upstream
+CMake-файлам и проверяет на fake Android prefix, что `PythonLibrary`, `SIP` и `PyQt5`
+находят target include/lib/site-packages/SIP metadata без запуска target extension modules.
+
+CI `Krita PyKrita discovery Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28259537561
+
+Следующий узкий слой: генерация SIP C++ для `PyKrita.krita` без компиляции всего модуля.
+Добавлен patch-кандидат `patches/krita/0002-add-android-pykrita-sip-generate-only.patch`,
+который вводит Android-only флаг `KRITA_ANDROID_PYKRITA_GENERATE_ONLY`. В этом режиме
+`SIPMacros.cmake` создаёт custom target генерации и не переходит к линковке
+`PyKrita.krita` с `kritalibkis`, `kritaui` и остальными Krita libraries.
+
+Добавлен CI probe `Krita PyKrita SIP generate Android`. Он берёт upstream Krita sparse
+checkout, применяет Krita patch-серию, устанавливает host `sip`/`PyQt5`, копирует PyQt5
+SIP bindings в fake Android prefix и запускает target
+`python_module_PyKrita_krita_sip_generate`.
+
+CI `Krita PyKrita SIP generate Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28259537548
+
+Следующий узкий слой: компиляция generated SIP C++ object files Android clang'ом без
+линковки финального Python module. Добавлен patch-кандидат
+`patches/krita/0003-add-android-pykrita-sip-compile-only.patch`, который вводит
+Android-only флаг `KRITA_ANDROID_PYKRITA_COMPILE_ONLY`. В этом режиме
+`SIPMacros.cmake` создаёт object library
+`python_module_PyKrita_krita_sip_objects`, подключает target Python headers,
+PyQt/Krita usage requirements, `SIP_PROTECTED_IS_PUBLIC` и Android-safe
+`-fno-operator-names`.
+
+Добавлен CI probe `Krita PyKrita SIP compile Android`. Он использует уже зелёный
+артефакт `krita-deps-pyqt5-minimal-${abi}`, применяет Krita patch-серию, генерирует
+SIP sources и компилирует `sipkritapart0.cpp` для `arm64-v8a` и `x86_64`.
+
+CI `Krita PyKrita SIP compile Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28261664383
+
+Проверено: Android clang компилирует generated PyKrita SIP C++ против Python 3.14,
+PyQt5 (`QtCore`, `QtGui`, `QtXml`, `QtWidgets`) и заголовков Krita. Для narrow probe
+в workflow временно добавлены header-only/stub include surfaces для Boost, Eigen,
+Krita generated config/export headers и KDE `KLocalizedString`.
+
+Следующий узкий слой: конфигурация родительского `plugins/extensions/pykrita` без
+desktop-only `kritarunner`. Добавлен patch-кандидат
+`patches/krita/0004-skip-kritarunner-for-android-pykrita.patch`: в Android experimental
+режиме остаются `sip` и embedded `plugin`, но не создаётся отдельный runner executable.
+
+Добавлен CI probe `Krita PyKrita top-level configure Android`. Он проходит через
+родительский `plugins/extensions/pykrita/CMakeLists.txt` с fake Android Python/PyQt
+prefix и проверяет, что targets `python_module_PyKrita_krita_sip_generate`, `pykrita`
+и `kritapykrita` создаются, а `kritarunner` пропускается.
+
+CI `Krita PyKrita top-level configure Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28262441987
+
+Следующий узкий слой: link smoke для обычного target `PyKrita.krita` без compile-only
+режима. Добавлен CI probe `Krita PyKrita SIP link smoke Android`. Он берёт зелёный
+`krita-deps-pyqt5-minimal-${abi}` artifact, применяет Krita patch-серию, собирает
+нормальный `python_module_PyKrita_krita` target и проверяет Android ELF `krita.so`.
+
+CI `Krita PyKrita SIP link smoke Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28264084186
+
+Проверено: `krita.so` собирается для `arm64-v8a` и `x86_64`, имеет правильный ELF
+machine type и NEEDED-зависимости на `libpython3.14.so`, `libQt5Core_${abi}.so`,
+`libQt5Gui_${abi}.so`, `libQt5Xml_${abi}.so` и `libQt5Widgets_${abi}.so`.
+
+Важно: это smoke-пробник, а не финальная runtime-сборка. В workflow пока остаются
+header-only/stub include surfaces и fake interface targets для Krita libraries; Android
+`--no-undefined` отключён только для этого smoke, поэтому unresolved Krita symbols
+ожидаемы до появления настоящих Android-built Krita shared libraries.
+
+Следующий узкий слой: инвентаризация настоящей link surface перед real-link сборкой.
+Добавлен CI probe `Krita PyKrita link inventory`. Он берёт sparse checkout upstream
+Krita, применяет patch-серию и читает CMake-файлы `PyKrita.krita`, `kritalibkis`,
+`kritaui`, `kritaimage` и `kritalibbrush`, чтобы получить Android Qt5 минимум без
+полной сборки Krita.
+
+Проверено локально: для первого real-link шага нужны Krita libraries
+`kritalibkis`, `kritaui`, `kritaimage`, `kritalibbrush`, `kritacolor`,
+`kritacommand`, `kritaglobal`, `kritaimpex`, `kritametadata`, `kritamultiarch`,
+`kritapigment`, `kritapsdutils`, `kritaresources`, `kritaversion`,
+`kritawidgets` и `kritawidgetutils`, плюс внешняя поверхность Qt5/KF5, PNG,
+Eigen, Boost, FFTW, GLESv3 и lager.
+
+CI `Krita PyKrita link inventory` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28293224421
+
+Следующий узкий слой: первые настоящие Krita shared libraries для Android. Добавлен
+CI probe `Krita real libs seed Android`. Он берёт уже зелёный Android PyQt5 prefix,
+импортирует Android Qt5 Core/Gui/Widgets/Xml/Sql/PrintSupport/AndroidExtras и напрямую собирает upstream
+`libs/version/CMakeLists.txt` как реальную `libkritaversion.so`, а также upstream
+`libs/global/CMakeLists.txt` как реальную `libkritaglobal.so`.
+
+Для `kritaglobal` probe пока подставляет минимальную generated surface для внешних
+зависимостей (`KF5::I18n`, `KF5::ConfigCore`, Boost/Eigen/lager/zug/GSL/unwindstack),
+но сама библиотека собирается из upstream `libs/global` и линкуется с real Android
+`libkritaversion.so`.
+
+Следующий низовой слой тоже добавлен в этот probe: upstream `libs/koplugin`,
+`libs/multiarch` и `libs/color` собираются как реальные Android shared libraries
+`libkritaplugin.so`, `libkritamultiarch.so` и `libkritacolor.so`. Для этого seed
+добавляет минимальную generated surface для `KF5::CoreAddons/KPluginFactory` и
+header-only `xsimd`, а upstream source по-прежнему берётся напрямую из sparse checkout.
+
+Следующий storage-слой добавлен туда же: upstream `libs/store` собирается как реальная
+Android shared library `libkritastore.so`. Для него seed пока подставляет минимальную
+header-only QuaZip surface (`quazip.h`, `quazipfile.h`, `quazipdir.h`,
+`quazipnewinfo.h`), но сама `kritastore` собирается из upstream `libs/store` и линкуется
+с real `kritaglobal`.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости на Android Qt5 libraries,
+NEEDED-зависимости новых Krita libraries на уже собранные seed libraries и экспортированные
+symbols `KritaVersionWrapper::versionString`, `KisUsageLogger::initialize`,
+`KoPluginLoader`, `vectorizationConfiguration`, `KisColorManager` и `KoStore`.
+
+CI `Krita real libs seed Android` зелёный.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28298474948
+
+Следующий dependency cluster тоже закрыт в этом probe: upstream `libs/resources`,
+`libs/widgetutils` и `libs/command` собираются как реальные Android shared libraries
+`libkritaresources.so`, `libkritawidgetutils.so` и `libkritacommand.so`. Для этого seed
+добавляет минимальную generated surface для оставшихся KF5/XMLGUI/lager/QuaZip API, но
+исходники трёх библиотек берутся напрямую из upstream Krita.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости новых библиотек на Android Qt5
+и предыдущие real seed libraries, а также exported symbols `KisResourceLocator`,
+`KisActionRegistry` и `KUndo2Stack`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28301018937
+
+Следующий слой real-library цепочки тоже продвинут: upstream `libs/pigment` собирается как
+реальная Android shared library `libkritapigment.so`. Seed добавляет per-arch xsimd
+копии исходников (`NEON64` на `arm64-v8a`; `SSE2`, `SSSE3`, `SSE4_1`, `AVX`,
+`AVX2+FMA` на `x86_64`), включает Krita source root для `KoAlwaysInline.h`, отключает
+tests/benchmarks и собирает `kritapigment` с `-fno-operator-names`, как это требуется для
+старых Krita-имен методов `xor`/`and`/`or`.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости `libkritapigment.so` на Android
+Qt5 и предыдущие real seed libraries, а также exported symbol `KoColorSpaceRegistry`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28302430361
+
+Еще один compact prerequisite для `kritaimage` закрыт: upstream `libs/metadata`
+собирается как реальная Android shared library `libkritametadata.so`. Seed отключает
+tests, подключает upstream target напрямую и проверяет, что библиотека линкуется с уже
+собранными real seed libraries.
+
+CI проверяет обе ABI, ELF machine type, NEEDED-зависимости `libkritametadata.so` на
+`libkritaglobal.so`, `libkritaplugin.so`, `libkritawidgetutils.so` и Android Qt5 Core, а
+также exported symbols из namespace `KisMetaData`.
+
+CI `Krita real libs seed Android` зелёный для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28303022560
+
+Следующий слой: продолжить real-library цепочку к зависимостям `PyKrita.krita`, начиная с
+оставшихся prerequisites для `kritaimage` (`kritawidgets`, `kritapsdutils`), затем
+`kritaimage`, `kritalibbrush` и дальше к `kritalibkis` -> `kritaui` -> `PyKrita.krita`.
+
+Следующий dependency cluster закрыт в этом probe: upstream `libs/resourcewidgets`,
+`libs/widgets` и `libs/psdutils` собираются как реальные Android shared libraries
+`libkritaresourcewidgets.so`, `libkritawidgets.so` и `libkritapsdutils.so`. Для
+`kritawidgets` seed добавляет минимальные KDE widget/config shims и точечные generated
+UI headers для `KoConfigAuthorPage`, `wdg_file_name_requester`, `WdgDlgInternalColorSelector`
+и `WdgPaletteListWidget`; upstream source остается прямым sparse checkout.
+
+CI `Krita real libs seed Android` зеленый для этого слоя.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28312002206
+
+Следующие PyKrita prerequisites закрыты в том же real-libs seed:
+
+- upstream `libs/image` собирается как `libkritaimage.so`;
+- upstream `libs/brush` собирается как `libkritalibbrush.so`;
+- upstream `libs/impex` собирается как `libkritaimpex.so`;
+- upstream `libs/ui` собирается как `libkritaui.so`;
+- upstream `libs/libkis` собирается как `libkritalibkis.so`.
+
+Для этих слоёв seed добавил минимальные Android/KDE/FFmpeg/SeExpr shims, но сами
+библиотеки берутся из upstream Krita. CI проверяет обе ABI, ELF machine type,
+NEEDED-зависимости и ключевые exported symbols.
+
+Зелёные runs:
+
+- `kritaimage`: https://github.com/Darxarz/krita-for-android/actions/runs/28323732554
+- `kritalibbrush`: https://github.com/Darxarz/krita-for-android/actions/runs/28325085418
+- `kritaimpex`: https://github.com/Darxarz/krita-for-android/actions/runs/28325491346
+- `kritaui`: https://github.com/Darxarz/krita-for-android/actions/runs/28479640404
+- `kritalibkis`: https://github.com/Darxarz/krita-for-android/actions/runs/28481920223
+- `PyKrita.krita`: https://github.com/Darxarz/krita-for-android/actions/runs/28483079006
+- `kritapykrita`: https://github.com/Darxarz/krita-for-android/actions/runs/28484876691
+
+Настоящий Android `PyKrita.krita` (`krita.so`) теперь собирается против уже зелёных
+real seed libraries вместо старого interface-only link smoke. Plugin wrapper
+`kritapykrita`, который инициализирует embedded Python plugin manager внутри Krita,
+тоже собирается и проверяется на обеих ABI.
 
 Критерий готовности: `kritapykrita` и `PyKrita.krita` собираются в Android build tree.
 
@@ -84,8 +339,208 @@ host Python, а target `libpython3.14.so` остаётся в этом же pref
 - Python standard library и site-packages в APK assets или app private storage;
 - `krita-ai-diffusion` plugin files.
 
+Первый packaging слой начат: `scripts/stage-krita-python-runtime-payload.sh` и CI
+`Krita Python runtime payload Android` скачивают зелёные PyQt/Python и real-libs
+artifacts, затем раскладывают их в APK-похожую структуру `jniLibs/<abi>` +
+`assets/python/...`. Это ещё не APK и ещё без `krita-ai-diffusion`, но это проверяемый
+runtime payload для следующего слоя `PyConfig`/Android packaging.
+
+CI `Krita Python runtime payload Android` зелёный для обеих ABI.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28485870841
+
 Нужно инициализировать Python на Android через modern `PyConfig`, а не через запуск
 внешнего `python` executable.
+
+Следующий init layer начат: `probes/krita-python-runtime-init/` собирает Android shared
+library, которая на runtime выставляет `PyConfig.home`, `module_search_paths` для staged
+payload и вызывает `Py_InitializeFromConfig()`. CI проверяет compile/link,
+ELF machine type, NEEDED `libpython3.14.so` и exported probe symbol.
+
+CI `Krita Python runtime init probe Android` зелёный для обеих ABI.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486088495
+
+Следующий packaging layer начат: нужно подключить staged payload и init probe к
+настоящему Android APK-контейнеру, а затем уже переходить к запуску в app process и
+первому тесту на планшете.
+
+CI `Krita Python runtime APK probe Android` зелёный для обеих ABI. Этот layer собирает
+минимальный подписанный APK-контейнер с `lib/<abi>` и `assets/python`, проверяет APK
+signature, entries и ELF machine type для ключевых native libraries.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486382851
+
+Следующий device-facing layer тоже добавлен: `Krita Python runtime launch APK probe
+Android` собирает launchable APK с `MainActivity`, Java-copy `assets/python` в
+app-private storage, JNI launcher и вызовом `krita_android_python_runtime_init_probe`.
+CI проверяет сборку launcher `.so`, NEEDED `libkrita_python_runtime_init_probe.so`,
+наличие JNI symbol, `classes.dex`, APK signature и ключевые native/assets entries.
+
+Run: https://github.com/Darxarz/krita-for-android/actions/runs/28486651957
+
+Первый реальный планшетный запуск показал launch window, но контент оставался белым.
+Добавляется diagnostic rebuild: native libraries больше не грузятся в Java static
+initializer до отрисовки UI; Activity показывает крупные screen/logcat breadcrumbs для
+`libpython`, init-probe, launcher, copy assets и `PyConfig` stage.
+
+После повторного теста белый экран оставался и планшет грелся около 10 минут. Следующий
+diagnostic layer переводит APK в manual mode: старт Activity больше не запускает ни
+native load, ни copy assets, ни PyConfig. UI показывает title `Krita Probe Manual v3` и
+кнопки для запуска каждого шага отдельно.
+
+Следующий diagnostic layer `Krita Probe Manual v4` добавляет кнопку `UI click test`,
+Toast и немедленное изменение текста нажатой кнопки до запуска фоновой задачи. Это
+отделяет проблему обработки touch/UI events от зависания native/runtime шага.
+
+После теста v4 UI click path работает, но native load доходит до сообщений загрузки
+библиотек и зависает без `OK`/`FAILED`. `Krita Probe Manual v5` разделяет native loading
+на кнопки `libpython`, init-probe и launcher, а также пишет `Loaded ... OK` после
+каждого успешного `System.load`.
+
+После теста v5 стало ясно, что клики работают, но сообщения результата слишком быстро
+теряются в верхнем status area. `Krita Probe Manual v6` оставляет итог прямо на кнопке
+(`DONE`/`FAILED`/`RUNNING`) и добавляет постоянный лог внизу экрана.
+
+Планшетный тест v6 показал, что `libpython3.14.so` загружается, payload копируется, но
+`init probe` и `launcher` падают на Android linker error: `libc++_shared.so` not found.
+Следующий APK packaging fix кладёт NDK `libc++_shared.so` в `lib/<abi>/` и проверяет его
+наличие в APK.
+
+Следующий runtime layer добавляет native import probe поверх уже зелёного `PyConfig`:
+он инициализирует Python из staged payload и проверяет импорты `sys`, `PyQt5.QtCore`,
+`PyKrita.krita` и built-in package `krita`. Это первый планшетный тест не только
+интерпретатора, но и реальной Python/PyQt/PyKrita import surface.
+
+`Krita Probe Manual v7` подключает этот import probe к launch APK кнопкой
+`4. Import Python modules` и возвращает на экран список успешных импортов или первый
+упавший module name.
+
+Планшетный тест v7 показал native crash/закрытие приложения при combined import probe.
+Следующий слой добавляет native `import_one` probe, чтобы проверять `sys`,
+`PyQt5.QtCore`, `PyKrita.krita` и `krita` отдельными кнопками и локализовать crash.
+
+`Krita Probe Manual v8` выводит отдельные кнопки `4a. Import sys`,
+`4b. Import PyQt5.QtCore`, `4c. Import PyKrita.krita` и `4d. Import krita`.
+Кнопка combined import сохранена как `4z`, а setup sequence больше не запускает
+опасный combined import автоматически.
+
+Планшетный тест v8: `sys` и `PyQt5.QtCore` импортируются успешно; `PyKrita.krita`
+и combined import закрывают процесс; `krita` возвращает обычный Python import failure
+без native crash. Это локализует падение в PyKrita native extension layer.
+
+`Krita Probe Manual v9` добавляет child-process probes для рискованных импортов:
+`PyQt5.QtGui`, `PyQt5.QtWidgets`, `PyQt5.QtXml`, `dlopen PyKrita.krita` и
+`import PyKrita.krita`. Если child падает, основной UI должен остаться живым и
+показать сигнал падения, что отделяет ELF/dlopen проблему от `PyInit_krita`.
+
+Планшетный тест v9: `PyQt5.QtGui` импортируется успешно; `PyQt5.QtWidgets` и
+`PyQt5.QtXml` возвращают Python import failure; `dlopen PyKrita.krita` и
+`import PyKrita.krita` падают в child process с `signal=11`. Следующий слой
+добавляет текст Python exception для import failures и отдельный `dlopen` probe для
+native-зависимостей PyKrita.
+
+`Krita Probe Manual v10` добавляет отдельные child `dlopen` checks для
+`QtWidgets`, `QtXml`, `libkritalibbrush`, `libkritaimage`, `libkritaui`,
+`libkritalibkis` и `libkritapykrita`, а init probe возвращает `error=...` для
+Python import failures. Это должно показать, какая native dependency падает до
+`PyInit_krita`, или подтвердить, что crash находится в loader/static-init самого
+`PyKrita.krita`.
+
+Планшетный тест v10: `PyQt5.QtWidgets`, `PyQt5.QtXml`, `dlopen QtWidgets` и
+`dlopen QtXml` проходят успешно; все `dlopen` checks для Krita native libraries
+возвращают `FAILED`; `dlopen PyKrita.krita` и `import PyKrita.krita` продолжают
+падать в child process с `signal=11`. Следующий слой сохраняет полный `dlerror` в
+persistent log, добавляет native inventory на устройстве и проверяет наличие Krita
+libraries внутри launch APK на CI.
+
+Планшетный тест v11: native inventory показывает, что Krita `.so` файлы существуют
+в `nativeLibraryDir` и имеют ненулевой размер, но `dlopen libkritalibbrush`,
+`libkritaimage`, `libkritaui`, `libkritalibkis`, `libkritapykrita` и `PyKrita.krita`
+падают с `signal=11`. Следующий слой ставит signal handler в child process и пишет
+`fault_addr`, `pc`, `lr`, `sp` и snapshot `/proc/self/maps` в persistent log.
+
+Планшетный тест v12: crash handler подтверждает `fault_addr=0`, `pc=lr` и показывает,
+что crash происходит при загрузке Krita libraries, когда они уже существуют и мапятся
+в память. Следующий слой добавляет `pc_map`, `lr_map`, `sp_map` и кнопку копирования
+полного persistent log, чтобы больше не читать длинные tombstone по скриншотам.
+
+Планшетный тест v13: копируемый persistent log подтвердил, что `pc_map` для падений
+`libkritalibbrush`, `libkritaimage` и `PyKrita.krita` указывает на
+`libQt5Core_arm64-v8a.so`. Локальный `addr2line` по одинаковому relative offset
+попадает в `QJNIEnvironmentPrivate::QJNIEnvironmentPrivate()`, где Qt разыменовывает
+результат `QtAndroidPrivate::javaVM()`. Следующий слой `Krita Probe Manual v14`
+грузит `QtCore` через Java `System.load` до Python/init/launcher/Krita `dlopen`, чтобы
+запустить `JNI_OnLoad` QtCore и передать Qt текущий `JavaVM`.
+
+Планшетный тест v14: прямой Java `System.load(libQt5Core_arm64-v8a.so)` доходит до
+`JNI_OnLoad`, но возвращает `JNI_ERR`. Разбор Qt 5.15.2 `qjnihelpers.cpp` и symbols
+`libQt5Core` показывает, что `QtAndroidPrivate::initJNI()` сначала ищет Java class
+`org/qtproject/qt5/android/QtNative`, вызывает `activity()`, `service()` и
+`classLoader()`, регистрирует native callbacks, и только после этого сохраняет
+`JavaVM`. Следующий слой `Krita Probe Manual v15` добавляет минимальный probe-only
+`QtNative` Java stub в APK, чтобы `JNI_OnLoad` мог завершиться и выставить `JavaVM`.
+
+Планшетный тест v15: `QtCore` грузится через Java `System.load`, все child `dlopen`
+checks для Krita native libraries проходят, `dlopen PyKrita.krita`, child import
+`PyKrita.krita` и direct import `PyKrita.krita` проходят. Остался не native crash, а
+обычный Python blocker: `import krita` падает с `ModuleNotFoundError: No module named
+'pykrita'`. В desktop Krita этот helper module регистрируется PyKrita plugin startup,
+а probe импортирует public wrapper вне полного Krita app startup. Следующий слой
+`Krita Probe Manual v16` добавляет probe-only `pykrita.py` helper stub с
+`qt_major_version()` и `qDebug()` в `krita-python-libs` и отдельную кнопку
+`4d0. Import pykrita helper`.
+
+Планшетный тест v16: `Run setup sequence`, `4d0. Import pykrita helper` и native
+`dlopen` проверки проходят, но direct `4d. Import krita` все еще роняет основной
+процесс. При этом child imports уже показывают Python-level blockers:
+`PyQt5.QtWidgets` падает с `EnumType.__call__() got an unexpected keyword argument
+'qualname'`, `PyQt5.QtXml` с `a bytes-like object is required, not 'int'`, а
+`PyKrita.krita` с `Collection() takes no arguments`. Следующий слой `Krita Probe
+Manual v17` переводит обычную кнопку `4d` на child-process import, а прямой import
+оставляет только как `4dZ` crash test, чтобы следующий лог фиксировал причину без
+закрытия приложения.
+
+Планшетный тест v17: `4d. Child import krita` больше не закрывает UI и показывает
+`signal=11`. Символикация APK artifact дала `pc=libQt5Core_arm64-v8a.so+0x20c8dc`
+как `QObject::thread() const`, а `lr=libkritawidgets.so+0x162cd4` как
+`KoResourceServer<KoPattern>::KoResourceServer(QString const&)`. Это значит, что
+public Python package `krita` доходит до eager `Krita.instance()` из
+`plugins/extensions/pykrita/plugin/krita/__init__.py` и пытается поднять Krita
+resource servers без полноценного Krita application context. Следующий слой
+`Krita Probe Manual v18` добавляет probe-only `krita_probe_safe_import.py`, который
+исполняет реальный `krita/__init__.py`, но пропускает только три eager alias строки
+`Krita.instance()`, а также печатает relative offsets прямо в crash map.
+
+`Krita Probe Manual v19` устраняет двусмысленность APK artifacts: launchable manual
+получает самостоятельный `versionCode`, явную icon и имя
+`krita-probe-manual-v19-<abi>.apk`. Отдельный технический payload-only APK теперь
+использует другой package id и явно помечен `no launcher`, поэтому он не сможет
+заменить запускаемый manual. Packaging проверяет через `aapt2 dump badging`, что
+готовый APK действительно содержит launchable `MainActivity`.
+
+Планшетный тест v19 подтверждает всю подготовительную цепочку: native libraries,
+Python 3.14, `pykrita` helper и безопасное исполнение реального public wrapper без
+`Krita.instance()` проходят. Обычный `import krita` по-прежнему изолированно падает
+на `Krita.instance()` в Krita resource stack. Следующий слой `Krita Probe Manual v20`
+добавляет два child-process теста: создание настоящего Qt `QApplication` и затем
+`QApplication` плюс `import krita`. Это отделяет недостающий Qt application context
+от необходимости полного `KisApplication` startup с ресурсами и plugin loading.
+
+Планшетный тест v20 подтвердил Python/PyQt loading, но `QApplication` завершился в
+child process с `SIGABRT` после загрузки `QtGui` и `QtWidgets`. Проверка полного
+PyQt prefix показала, что `libplugins_platforms_qtforandroid_<abi>.so` существует,
+но v20 не включал его в payload. Следующий слой `Krita Probe Manual v21` включает
+Android Qt platform plugin, передаёт Qt его точный directory, сохраняет child
+stdout/stderr в persistent log и добавляет `QCoreApplication` probes. Так следующий
+лог отличит отсутствующий GUI platform plugin от требования полного
+`KisApplication` startup.
+
+Перед планшетной установкой v21 был найден ещё один packaging-to-runtime gap:
+APK содержал `assets/qt`, но Java copier переносил в app-private directory только
+`assets/python`. `Krita Probe Manual v22` копирует обе директории, проверяет
+platform plugin before reuse и хранит sentinel в runtime root, поэтому старый
+Python-only payload автоматически заменяется полным runtime payload.
 
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.

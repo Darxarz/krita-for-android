@@ -1,0 +1,153 @@
+name: Krita Python runtime init probe Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-python-runtime-init-probe-android.yml"
+      - "probes/krita-python-runtime-init/**"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  init-probe:
+    name: Build PyConfig runtime init probe ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Resolve ABI metadata
+        run: |
+          set -eux
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a)
+              machine_pattern="Machine:[[:space:]]*AArch64"
+              ;;
+            x86_64)
+              machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
+              ;;
+          esac
+
+          echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
+
+      - name: Download Android PyQt5 dependency prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-deps-pyqt5-minimal-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          mkdir -p "$prefix"
+          gh run download "$run_id" \
+            --name "krita-deps-pyqt5-minimal-${{ matrix.abi }}" \
+            --dir "$prefix"
+
+          test -f "$prefix/include/python3.14/Python.h"
+
+      - name: Download Krita Python runtime payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-python-runtime-payload-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          mkdir -p "$payload"
+          gh run download "$run_id" \
+            --name "krita-python-runtime-payload-${{ matrix.abi }}" \
+            --dir "$payload"
+
+          test -f "$payload/jniLibs/${{ matrix.abi }}/libpython3.14.so"
+          test -f "$payload/assets/python/krita-python-libs/PyKrita/krita.so"
+
+      - name: Configure runtime init probe
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+
+          cmake -S probes/krita-python-runtime-init \
+            -B build/krita-python-runtime-init/${{ matrix.abi }} \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_STL=c++_shared \
+            -DPYTHON_ANDROID_INCLUDE_DIR="$prefix/include/python3.14" \
+            -DPYTHON_ANDROID_LIBRARY="$payload/jniLibs/${{ matrix.abi }}/libpython3.14.so"
+
+      - name: Build and verify runtime init probe
+        run: |
+          set -eux
+
+          build_dir="build/krita-python-runtime-init/${{ matrix.abi }}"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          cmake --build "$build_dir" --target krita_python_runtime_init_probe --verbose
+
+          probe="$build_dir/libkrita_python_runtime_init_probe.so"
+          test -f "$probe"
+          file "$probe"
+
+          "$readelf" -h "$probe" | tee "$RUNNER_TEMP/krita-python-runtime-init-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/krita-python-runtime-init-header.txt"
+
+          "$readelf" -d "$probe" | tee "$RUNNER_TEMP/krita-python-runtime-init-dynamic.txt"
+          grep -Fq "Shared library: [libpython3.14.so]" "$RUNNER_TEMP/krita-python-runtime-init-dynamic.txt"
+
+          "$readelf" -Ws "$probe" | tee "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_init_probe" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_init_probe_message" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_import_probe" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+          grep -q "krita_android_python_runtime_import_one_probe" "$RUNNER_TEMP/krita-python-runtime-init-symbols.txt"
+
+      - name: Upload runtime init probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-python-runtime-init-probe-${{ matrix.abi }}
+          path: build/krita-python-runtime-init/${{ matrix.abi }}/libkrita_python_runtime_init_probe.so

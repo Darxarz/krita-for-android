@@ -1,0 +1,187 @@
+name: Krita Python runtime launch APK probe Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-python-runtime-launch-apk-probe-android.yml"
+      - "scripts/package-krita-python-runtime-launch-apk-probe.sh"
+      - "probes/krita-python-runtime-launch-apk/**"
+      - "probes/krita-python-runtime-payload/**"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  launch-apk-probe:
+    name: Build launchable Python runtime APK probe ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zip unzip
+
+      - name: Resolve ABI metadata
+        run: |
+          set -eux
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a)
+              triplet="aarch64-linux-android"
+              machine_pattern="Machine:[[:space:]]*AArch64"
+              ;;
+            x86_64)
+              triplet="x86_64-linux-android"
+              machine_pattern="Machine:[[:space:]]*Advanced Micro Devices X86-64"
+              ;;
+          esac
+
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
+          echo "machine_pattern=$machine_pattern" >> "$GITHUB_ENV"
+
+      - name: Download Krita Python runtime payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-python-runtime-payload-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          mkdir -p "$payload"
+          gh run download "$run_id" \
+            --name "krita-python-runtime-payload-${{ matrix.abi }}" \
+            --dir "$payload"
+
+          test -f "$payload/jniLibs/${{ matrix.abi }}/libpython3.14.so"
+          test -f "$payload/assets/python/krita-python-libs/PyKrita/krita.so"
+
+      - name: Download Krita Python runtime init probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-python-runtime-init-probe-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          init_probe_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}"
+          mkdir -p "$init_probe_dir"
+          gh run download "$run_id" \
+            --name "krita-python-runtime-init-probe-${{ matrix.abi }}" \
+            --dir "$init_probe_dir"
+
+          test -f "$init_probe_dir/libkrita_python_runtime_init_probe.so"
+
+      - name: Build JNI launcher
+        run: |
+          set -eux
+
+          init_probe="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}/libkrita_python_runtime_init_probe.so"
+          build_dir="build/krita-python-runtime-launch-apk/${{ matrix.abi }}"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          cmake -S probes/krita-python-runtime-launch-apk \
+            -B "$build_dir" \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_STL=c++_shared \
+            -DKRITA_RUNTIME_INIT_PROBE_LIBRARY="$init_probe"
+
+          cmake --build "$build_dir" --target krita_python_runtime_launcher --verbose
+
+          launcher="$build_dir/libkrita_python_runtime_launcher.so"
+          test -f "$launcher"
+          "$readelf" -h "$launcher" | tee "$RUNNER_TEMP/krita-python-runtime-launcher-header.txt"
+          grep -Eq "$machine_pattern" "$RUNNER_TEMP/krita-python-runtime-launcher-header.txt"
+          "$readelf" -d "$launcher" | tee "$RUNNER_TEMP/krita-python-runtime-launcher-dynamic.txt"
+          grep -Fq "Shared library: [libkrita_python_runtime_init_probe.so]" "$RUNNER_TEMP/krita-python-runtime-launcher-dynamic.txt"
+          "$readelf" -Ws "$launcher" | tee "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runInitProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runImportOneProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildImportOneProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPyKritaProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+          grep -q "Java_org_krita_android_pythonruntimeprobe_MainActivity_runChildDlopenPathProbe" "$RUNNER_TEMP/krita-python-runtime-launcher-symbols.txt"
+
+      - name: Package launchable APK probe
+        run: |
+          set -eux
+
+          payload="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-payload/${{ matrix.abi }}"
+          init_probe="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-init-probe/${{ matrix.abi }}/libkrita_python_runtime_init_probe.so"
+          launcher="$GITHUB_WORKSPACE/build/krita-python-runtime-launch-apk/${{ matrix.abi }}/libkrita_python_runtime_launcher.so"
+          cxx_shared="$(find "$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triplet" \
+            -maxdepth 2 -name "libc++_shared.so" -print -quit 2>/dev/null || true)"
+          if [ -z "$cxx_shared" ]; then
+            cxx_shared="$(find "$ANDROID_HOME/ndk/27.3.13750724/sources/cxx-stl/llvm-libc++/libs/${{ matrix.abi }}" \
+              -maxdepth 1 -name "libc++_shared.so" -print -quit 2>/dev/null || true)"
+          fi
+          java_source_dir="$GITHUB_WORKSPACE/probes/krita-python-runtime-launch-apk/java"
+          output_dir="$GITHUB_WORKSPACE/artifacts/krita-python-runtime-launch-apk-probe/${{ matrix.abi }}"
+          android_jar="$ANDROID_HOME/platforms/android-35/android.jar"
+          build_tools_dir="$ANDROID_HOME/build-tools/35.0.0"
+          readelf="$ANDROID_HOME/ndk/27.3.13750724/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+
+          test -n "$cxx_shared"
+          test -f "$cxx_shared"
+
+          bash scripts/package-krita-python-runtime-launch-apk-probe.sh \
+            "${{ matrix.abi }}" \
+            "$payload" \
+            "$init_probe" \
+            "$launcher" \
+            "$cxx_shared" \
+            "$java_source_dir" \
+            "$output_dir" \
+            "$android_jar" \
+            "$build_tools_dir" \
+            "$readelf" \
+            "$machine_pattern"
+
+      - name: Upload Krita Python runtime launch APK probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-probe-manual-v22-${{ matrix.abi }}
+          path: |
+            artifacts/krita-python-runtime-launch-apk-probe/${{ matrix.abi }}/krita-probe-manual-v22-${{ matrix.abi }}.apk
+            artifacts/krita-python-runtime-launch-apk-probe/${{ matrix.abi }}/MANIFEST.txt

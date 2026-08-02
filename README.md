@@ -20,6 +20,26 @@
 - `patches/krita-deps-management/0001-ext-python-android-release-package.patch` -
   первый экспериментальный патч для dependency recipe Krita: заменить TODO/FATAL_ERROR
   в `ext_python` на установку официального Android Python package.
+- `patches/krita-deps-management/0004-build-pyqt5-sip-for-android.patch` -
+  экспериментальный Android cross-build для модуля `PyQt5.sip`.
+- `.github/workflows/krita-deps-pyqt5-sip-android.yml` - проверяет, что `PyQt5.sip`
+  собирается как Android extension module для `arm64-v8a` и `x86_64`.
+- `.github/workflows/krita-real-libs-seed-android.yml` - собирает первые настоящие
+  upstream-библиотеки Krita для Android: `libkritaversion.so`, `libkritaglobal.so`,
+  `libkritaplugin.so`, `libkritamultiarch.so`, `libkritacolor.so` и
+  `libkritastore.so`, `libkritaresources.so`, `libkritawidgetutils.so` и
+  `libkritacommand.so`, `libkritapigment.so`, `libkritametadata.so`.
+- `.github/workflows/krita-python-runtime-payload-android.yml` - первый packaging layer:
+  собирает APK-похожий payload из Android Python/PyQt, real Krita libraries,
+  `PyKrita.krita` и built-in PyKrita Python package.
+- `.github/workflows/krita-python-runtime-init-probe-android.yml` - собирает Android
+  `.so` с `PyConfig`-инициализацией Python из staged payload paths.
+- `.github/workflows/krita-python-runtime-apk-probe-android.yml` - упаковывает runtime
+  payload и init probe в минимальный подписанный Android APK-контейнер и проверяет
+  ключевые `lib/<abi>`/`assets/python` entries.
+- `.github/workflows/krita-python-runtime-launch-apk-probe-android.yml` - следующий
+  launchable probe: собирает JNI launcher + Activity, чтобы на устройстве можно было
+  скопировать `assets/python` в app-private storage и вызвать PyConfig init probe.
 - `docs/UPSTREAM_FINDINGS.md` - что найдено в текущих upstream-исходниках.
 - `docs/ROADMAP.md` - путь от этого probe до реального `krita-ai-diffusion` в Krita
   Android.

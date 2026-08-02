@@ -1,0 +1,441 @@
+name: Krita PyKrita SIP link smoke Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-pykrita-sip-link-smoke-android.yml"
+      - "patches/krita/*.patch"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  link-smoke:
+    name: Link PyKrita SIP module ${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - x86_64
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.3.13750724" \
+            "cmake;3.22.1"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential ninja-build libboost-dev libeigen3-dev libgl1-mesa-dev libxkbcommon-x11-0
+
+      - name: Download Android PyQt5 dependency prefix
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eux
+
+          run_id="$(gh run list \
+            --workflow krita-deps-pyqt5-minimal-android.yml \
+            --branch "$GITHUB_REF_NAME" \
+            --status success \
+            --limit 20 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          test -n "$run_id"
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          mkdir -p "$prefix"
+          gh run download "$run_id" \
+            --name "krita-deps-pyqt5-minimal-${{ matrix.abi }}" \
+            --dir "$prefix"
+
+          case "${{ matrix.abi }}" in
+            arm64-v8a) triplet="aarch64-linux-android" ; machine="AArch64" ;;
+            x86_64) triplet="x86_64-linux-android" ; machine="Advanced Micro Devices X86-64" ;;
+          esac
+          echo "triplet=$triplet" >> "$GITHUB_ENV"
+          echo "machine=$machine" >> "$GITHUB_ENV"
+
+          test -f "$prefix/include/python3.14/Python.h"
+          test -f "$prefix/lib/libpython3.14.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/sip.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/QtXml.cpython-314-${triplet}.so"
+          test -f "$prefix/lib/python3.14/site-packages/PyQt5/bindings/QtXml/QtXml.toml"
+          test -d "$prefix/include/QtCore"
+          test -d "$prefix/include/QtGui"
+          test -d "$prefix/include/QtXml"
+          test -d "$prefix/include/QtWidgets"
+          test -f "$prefix/lib/libQt5Core_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Gui_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Xml_${{ matrix.abi }}.so"
+          test -f "$prefix/lib/libQt5Widgets_${{ matrix.abi }}.so"
+
+      - name: Install host SIP tools
+        run: |
+          set -eux
+
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user "sip==6.10.0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            cmake/modules \
+            libs \
+            plugins/extensions/pykrita
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Configure PyKrita SIP link smoke
+        run: |
+          set -eux
+
+          prefix="$GITHUB_WORKSPACE/artifacts/krita-pyqt5-minimal/${{ matrix.abi }}"
+          generated_include="$GITHUB_WORKSPACE/build/pykrita-sip-link-smoke/${{ matrix.abi }}/generated-includes"
+          mkdir -p "$generated_include" probe
+
+          for header in \
+            dummytrivialinterface_export.h \
+            kis_image_export.h \
+            kritabasicflakes_export.h \
+            kritalibkis_export.h \
+            kritaflake_export.h \
+            kritawidgets_export.h \
+            kritabrush_export.h \
+            kritacolor_export.h \
+            kritacolord_export.h \
+            kritaui_export.h \
+            kritaimage_export.h \
+            kritaimpex_export.h \
+            kritametadata_export.h \
+            kritamultiarch_export.h \
+            kritapigment_export.h \
+            kritaplugin_export.h \
+            kritapsd_export.h \
+            kritapsdutils_export.h \
+            kritaresources_export.h \
+            kritaresourcewidgets_export.h \
+            kritastore_export.h \
+            kritasurfacecolormanagementapi_export.h \
+            kritaglobal_export.h \
+            kritacommand_export.h \
+            kritaversion_export.h \
+            kritawidgetutils_export.h; do
+            cat > "$generated_include/$header" <<'H'
+          #pragma once
+          #define DUMMYTRIVIALINTERFACE_EXPORT
+          #define KIS_IMAGE_EXPORT
+          #define KRITABASICFLAKES_EXPORT
+          #define KRITALIBKIS_EXPORT
+          #define KRITAFLAKE_EXPORT
+          #define KRITAWIDGETS_EXPORT
+          #define KRITABRUSH_EXPORT
+          #define KRITACOLOR_EXPORT
+          #define KRITACOLORD_EXPORT
+          #define KRITAUI_EXPORT
+          #define KRITAIMAGE_EXPORT
+          #define KRITAIMAGE_EXPORT_TEMPLATE
+          #define KRITAIMAGE_EXPORT_INSTANCE
+          #define KRITAIMPEX_EXPORT
+          #define KRITAMETADATA_EXPORT
+          #define KRITAMULTIARCH_EXPORT
+          #define KRITAPIGMENT_EXPORT
+          #define KRITAPLUGIN_EXPORT
+          #define KRITAPSD_EXPORT
+          #define KRITAPSDUTILS_EXPORT
+          #define KRITARESOURCES_EXPORT
+          #define KRITARESOURCEWIDGETS_EXPORT
+          #define KRITASTORE_EXPORT
+          #define KRITASURFACECOLORMANAGEMENTAPI_EXPORT
+          #define KRITAGLOBAL_EXPORT
+          #define KRITACOMMAND_EXPORT
+          #define KRITAVERSION_EXPORT
+          #define KRITAWIDGETUTILS_EXPORT
+          H
+          done
+
+          for header in \
+            KoConfig.h \
+            config-android-stdio-forwarding.h \
+            config-debug.h \
+            config-gsl.h \
+            config-hash-table-implementation.h \
+            config-hdr.h \
+            config-limit-long-tests.h \
+            config-memory-leak-tracker.h \
+            config-mlt.h \
+            config-ocio.h \
+            config-qmdiarea-always-show-subwindow-title.h \
+            config-qt-patches-present.h \
+            config-safe-asserts.h \
+            config-seexpr.h \
+            config-updaters.h \
+            config-use-surface-color-management-api.h \
+            config-xmlgui.h; do
+            cat > "$generated_include/$header" <<'H'
+          #pragma once
+          H
+          done
+
+          cat > "$generated_include/klocalizedstring.h" <<'H'
+          #pragma once
+
+          #include <QString>
+          #include <QStringList>
+
+          class KLocalizedString
+          {
+          public:
+              KLocalizedString() = default;
+              explicit KLocalizedString(const char *text)
+                  : m_text(QString::fromUtf8(text ? text : ""))
+              {
+              }
+              explicit KLocalizedString(const QString &text)
+                  : m_text(text)
+              {
+              }
+
+              QString toString() const
+              {
+                  return m_text;
+              }
+
+              operator QString() const
+              {
+                  return toString();
+              }
+
+              template <typename... Args>
+              KLocalizedString subs(Args &&...) const
+              {
+                  return *this;
+              }
+
+              static void setApplicationDomain(const char *)
+              {
+              }
+
+              static QStringList languages()
+              {
+                  return QStringList();
+              }
+
+              static QString removeAcceleratorMarker(const QString &text)
+              {
+                  return text;
+              }
+
+          private:
+              QString m_text;
+          };
+
+          inline KLocalizedString ki18n(const char *text)
+          {
+              return KLocalizedString(text);
+          }
+
+          inline KLocalizedString ki18nc(const char *, const char *text)
+          {
+              return KLocalizedString(text);
+          }
+
+          template <typename... Args>
+          inline QString i18n(const char *text, Args &&...)
+          {
+              return QString::fromUtf8(text ? text : "");
+          }
+
+          template <typename... Args>
+          inline QString i18nc(const char *, const char *text, Args &&...)
+          {
+              return QString::fromUtf8(text ? text : "");
+          }
+
+          template <typename... Args>
+          inline QString i18np(const char *singular, const char *, Args &&...)
+          {
+              return QString::fromUtf8(singular ? singular : "");
+          }
+
+          template <typename... Args>
+          inline QString i18ncp(const char *, const char *singular, const char *, Args &&...)
+          {
+              return QString::fromUtf8(singular ? singular : "");
+          }
+          H
+          cp "$generated_include/klocalizedstring.h" "$generated_include/KLocalizedString"
+
+          ln -s /usr/include/boost "$generated_include/boost"
+          ln -s /usr/include/eigen3/Eigen "$generated_include/Eigen"
+
+          cat > probe/CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.21)
+          project(pykrita_sip_link_smoke_probe CXX)
+
+          set(CMAKE_CXX_STANDARD 17)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+          set(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL ON)
+          set(CMAKE_MODULE_PATH "${KRITA_SOURCE_DIR}/cmake/modules")
+          set(CMAKE_PREFIX_PATH "${ANDROID_PREFIX}")
+          set(KDE_INSTALL_LIBDIR "lib")
+          set(QT_MAJOR_VERSION 5)
+
+          foreach(_linker_flag_var CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+              separate_arguments(_linker_flags NATIVE_COMMAND "${${_linker_flag_var}}")
+              list(REMOVE_ITEM _linker_flags "-Wl,--no-undefined")
+              string(JOIN " " ${_linker_flag_var} ${_linker_flags})
+          endforeach()
+
+          find_package(PythonLibrary 3.8 REQUIRED)
+          find_package(SIP "4.19.13" REQUIRED)
+          find_package(PyQt5 "5.6.0" REQUIRED)
+
+          set(PYQT_VERSION_TAG ${PYQT5_VERSION_TAG})
+          set(PYQT_SIP_NAME ${PYQT5_SIP_NAME})
+          set(PYQT_SIP_TAGS ${PYQT5_SIP_TAGS})
+          set(PYQT_SIP_DIR ${PYQT5_SIP_DIR})
+          set(PYTHON_SITE_PACKAGES_INSTALL_DIR "lib/krita-python-libs")
+
+          set(_krita_probe_qt_libraries)
+          foreach(_qt_module Core Gui Xml Widgets)
+              set(_qt_library
+                  "${ANDROID_PREFIX}/lib/libQt5${_qt_module}_${ANDROID_ABI}.so")
+
+              if(NOT EXISTS "${_qt_library}")
+                  message(FATAL_ERROR
+                      "Could not find Android Qt5${_qt_module} library under "
+                      "${ANDROID_PREFIX}/lib")
+              endif()
+
+              list(APPEND _krita_probe_qt_libraries "${_qt_library}")
+          endforeach()
+
+          add_library(krita_android_qt_dependencies INTERFACE)
+          target_link_libraries(krita_android_qt_dependencies INTERFACE
+              ${_krita_probe_qt_libraries}
+              GLESv2
+              log
+              z)
+
+          include_directories("${PYTHON_INCLUDE_DIRS}")
+
+          set(_krita_probe_include_dirs
+              "${GENERATED_INCLUDE_DIR}"
+              "${KRITA_SOURCE_DIR}"
+              "${KRITA_SOURCE_DIR}/libs/libkis"
+              "${KRITA_SOURCE_DIR}/libs/global"
+              "${KRITA_SOURCE_DIR}/libs/resources"
+              "${KRITA_SOURCE_DIR}/libs/pigment"
+              "${KRITA_SOURCE_DIR}/libs/brush"
+              "${KRITA_SOURCE_DIR}/libs/flake"
+              "${KRITA_SOURCE_DIR}/libs/widgets"
+              "${KRITA_SOURCE_DIR}/libs/image"
+              "${KRITA_SOURCE_DIR}/libs/image/brushengine"
+              "${KRITA_SOURCE_DIR}/libs/image/commands"
+              "${KRITA_SOURCE_DIR}/libs/image/generator"
+              "${ANDROID_PREFIX}/include"
+              "${ANDROID_PREFIX}/include/QtCore"
+              "${ANDROID_PREFIX}/include/QtGui"
+              "${ANDROID_PREFIX}/include/QtXml"
+              "${ANDROID_PREFIX}/include/QtWidgets"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtCore"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtGui"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtXml"
+              "${ANDROID_PREFIX}/lib/python3.14/site-packages/PyQt5/bindings/QtWidgets")
+
+          file(GLOB_RECURSE _krita_probe_lib_entries
+              LIST_DIRECTORIES true
+              "${KRITA_SOURCE_DIR}/libs/*")
+          foreach(_entry ${_krita_probe_lib_entries})
+              if(IS_DIRECTORY "${_entry}")
+                  list(APPEND _krita_probe_include_dirs "${_entry}")
+              endif()
+          endforeach()
+          list(REMOVE_DUPLICATES _krita_probe_include_dirs)
+
+          foreach(_target kritalibkis kritaui kritaimage kritalibbrush)
+              add_library(${_target} INTERFACE)
+              target_include_directories(${_target} INTERFACE ${_krita_probe_include_dirs})
+              target_compile_definitions(${_target} INTERFACE
+                  QT_CORE_LIB
+                  QT_GUI_LIB
+                  QT_XML_LIB
+                  QT_WIDGETS_LIB
+                  QT_NO_DEBUG)
+              target_link_libraries(${_target} INTERFACE krita_android_qt_dependencies)
+          endforeach()
+
+          add_subdirectory("${KRITA_SOURCE_DIR}/plugins/extensions/pykrita/sip" pykrita-sip)
+
+          if(TARGET python_module_PyKrita_krita)
+              target_link_options(python_module_PyKrita_krita PRIVATE
+                  -Wl,--unresolved-symbols=ignore-all
+                  -Wl,-z,undefs
+                  -Wl,-z,max-page-size=16384)
+          endif()
+          CMAKE
+
+          cmake -S probe -B build/pykrita-sip-link-smoke/${{ matrix.abi }} \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.3.13750724/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI="${{ matrix.abi }}" \
+            -DANDROID_PLATFORM=android-24 \
+            -DANDROID_STL=c++_shared \
+            -DKRITA_SOURCE_DIR="$GITHUB_WORKSPACE/upstream/krita" \
+            -DANDROID_PREFIX="$prefix" \
+            -DGENERATED_INCLUDE_DIR="$generated_include"
+
+      - name: Link PyKrita SIP module smoke
+        run: |
+          set -eux
+
+          build_dir="build/pykrita-sip-link-smoke/${{ matrix.abi }}"
+          cmake --build "$build_dir" --target python_module_PyKrita_krita --verbose
+
+          module="$(find "$build_dir" -name 'krita.so' -print -quit)"
+          test -n "$module"
+          file "$module"
+          readelf -h "$module" | grep "Machine:.*${machine}"
+          readelf -d "$module" | tee "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          grep "libpython3.14.so" "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          grep "libQt5Core_${{ matrix.abi }}.so" "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          grep "libQt5Gui_${{ matrix.abi }}.so" "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          grep "libQt5Xml_${{ matrix.abi }}.so" "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          grep "libQt5Widgets_${{ matrix.abi }}.so" "$RUNNER_TEMP/pykrita-link-smoke-dynamic.txt"
+          readelf -Ws "$module" | grep ' UND ' | head -50 || true
+
+      - name: Upload generated PyKrita SIP link smoke tree
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pykrita-sip-link-smoke-tree-${{ matrix.abi }}
+          path: build/pykrita-sip-link-smoke/${{ matrix.abi }}

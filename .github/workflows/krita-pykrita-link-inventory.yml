@@ -1,0 +1,65 @@
+name: Krita PyKrita link inventory
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/krita-pykrita-link-inventory.yml"
+      - "scripts/pykrita_link_inventory.py"
+      - "patches/krita/*.patch"
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Inventory PyKrita real-link surface
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Clone sparse Krita checkout
+        run: |
+          set -eux
+
+          git clone --depth 1 --filter=blob:none --sparse https://invent.kde.org/graphics/krita.git upstream/krita
+          git -C upstream/krita sparse-checkout set --skip-checks \
+            CMakeLists.txt \
+            cmake/modules \
+            libs/brush \
+            libs/image \
+            libs/libkis \
+            libs/ui \
+            plugins/extensions/pykrita
+
+      - name: Apply Krita patches
+        run: |
+          set -eux
+
+          for patch in patches/krita/*.patch; do
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Generate PyKrita link inventory
+        run: |
+          set -eux
+
+          mkdir -p build
+          python3 scripts/pykrita_link_inventory.py \
+            --krita-source upstream/krita \
+            --output build/pykrita-link-inventory.json \
+            --qt-major 5 \
+            --kf-major 5
+
+          python3 -m json.tool build/pykrita-link-inventory.json > build/pykrita-link-inventory.pretty.json
+
+      - name: Upload PyKrita link inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pykrita-link-inventory
+          path: |
+            build/pykrita-link-inventory.json
+            build/pykrita-link-inventory.pretty.json

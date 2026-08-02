@@ -1,0 +1,227 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Fri, 26 Jun 2026 00:00:00 +0000
+Subject: [PATCH] Add experimental Android PyKrita discovery
+
+Allow Android builds to opt into PyKrita discovery without importing target
+Android Python extension modules on the host runner. The target Python and
+PyQt paths are taken from the Android dependency prefix, while host Python is
+still used to run SIP generation tools.
+---
+ CMakeLists.txt                        |  6 +++
+ cmake/modules/FindPyQt5.cmake         | 38 +++++++++++++++++++
+ cmake/modules/FindPythonLibrary.cmake | 70 +++++++++++++++++++++++++++++++++++
+ cmake/modules/FindSIP.cmake           | 27 ++++++++++++++
+ 4 files changed, 141 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 0000000000..0000000000 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -352,8 +352,14 @@ option(USE_EXTERNAL_RAQM "Fetch Raqm dependency online instead of the embedded o
+ 
+ if(ANDROID)
+ option(ANDROID_ENABLE_STDIO_FORWARDING "Enable forwarding of qDebug() and stdio messages to logcat" OFF)
++option(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL "Enable experimental PyKrita discovery and build support on Android" OFF)
+ configure_file(config-android-stdio-forwarding.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-android-stdio-forwarding.h)
+ add_feature_info("Enable debug logging on Android" ANDROID_ENABLE_STDIO_FORWARDING "Enable forwarding of qDebug() and stdio messages to logcat")
++add_feature_info("Experimental PyKrita on Android" ENABLE_ANDROID_PYKRITA_EXPERIMENTAL "Enable target Python/PyQt discovery for Android PyKrita builds")
+ endif()
++
++if(ENABLE_ANDROID_PYKRITA_EXPERIMENTAL AND NOT ANDROID)
++    message(FATAL_ERROR "ENABLE_ANDROID_PYKRITA_EXPERIMENTAL is only supported for Android builds")
++endif()
+ 
+ set(ADDRESS_SANITIZER_ENABLED FALSE)
+ if (ECM_ENABLE_SANITIZERS MATCHES address)
+diff --git a/cmake/modules/FindPyQt5.cmake b/cmake/modules/FindPyQt5.cmake
+index 0000000000..0000000000 100644
+--- a/cmake/modules/FindPyQt5.cmake
++++ b/cmake/modules/FindPyQt5.cmake
+@@ -32,6 +32,42 @@ ELSE(EXISTS PYQT5_VERSION)
+ 
+   FIND_FILE(_find_pyqt5_py FindPyQt5.py PATHS ${CMAKE_MODULE_PATH})
+ 
++  if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++    set(KRITA_ANDROID_PYTHON_VERSION "3.14" CACHE STRING "Android target Python version used by Krita PyKrita")
++    set(KRITA_ANDROID_PYQT5_VERSION_STR "5.15.11" CACHE STRING "Android target PyQt5 version used by Krita PyKrita")
++    set(KRITA_ANDROID_PYQT5_VERSION "050f0b" CACHE STRING "Android target PyQt5 version encoded as a hex string")
++    set(KRITA_ANDROID_PYQT5_VERSION_TAG "Qt_5_15_2" CACHE STRING "Qt version tag used for Android PyQt5 SIP generation")
++    set(KRITA_ANDROID_PYQT5_SIP_NAME "PyQt5.sip" CACHE STRING "SIP module name used by Android PyQt5")
++    set(KRITA_ANDROID_PYQT5_SIP_TAGS "${KRITA_ANDROID_PYQT5_VERSION_TAG}" CACHE STRING "Semicolon-separated SIP tags used by Android PyQt5")
++
++    if(NOT KRITA_ANDROID_PYQT5_SITE_PACKAGES)
++      if(KRITA_ANDROID_PYTHON_PREFIX)
++        set(_krita_android_pyqt5_prefix "${KRITA_ANDROID_PYTHON_PREFIX}")
++      elseif(CMAKE_PREFIX_PATH)
++        list(GET CMAKE_PREFIX_PATH 0 _krita_android_pyqt5_prefix)
++      else()
++        set(_krita_android_pyqt5_prefix "${CMAKE_INSTALL_PREFIX}")
++      endif()
++
++      set(KRITA_ANDROID_PYQT5_SITE_PACKAGES
++        "${_krita_android_pyqt5_prefix}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages"
++        CACHE PATH "Android target Python site-packages containing PyQt5")
++    endif()
++
++    set(PYQT5_VERSION ${KRITA_ANDROID_PYQT5_VERSION})
++    set(PYQT5_VERSION_STR ${KRITA_ANDROID_PYQT5_VERSION_STR})
++    set(PYQT5_VERSION_TAG ${KRITA_ANDROID_PYQT5_VERSION_TAG})
++    set(PYQT5_SIP_NAME ${KRITA_ANDROID_PYQT5_SIP_NAME})
++    set(PYQT5_SIP_DIR "${KRITA_ANDROID_PYQT5_SITE_PACKAGES}/PyQt5/bindings")
++    set(PYQT5_SIP_FLAGS "-n ${PYQT5_SIP_NAME} -t ${PYQT5_VERSION_TAG}")
++    set(PYQT5_SIP_TAGS ${KRITA_ANDROID_PYQT5_SIP_TAGS})
++
++    if(NOT EXISTS "${PYQT5_SIP_DIR}/QtCore/QtCore.toml")
++      message(FATAL_ERROR "Android PyQt5 SIP metadata was not found at ${PYQT5_SIP_DIR}/QtCore/QtCore.toml")
++    endif()
++
++    set(PYQT5_FOUND TRUE)
++  else()
+ 
+   if (WIN32)
+     # python modules need Qt and C++ libraries be added via explicit
+@@ -72,6 +108,8 @@ ELSE(EXISTS PYQT5_VERSION)
+ 
+     SET(PYQT5_FOUND TRUE)
+   ENDIF(pyqt5_config)
++
++  endif()
+ 
+   IF(PYQT5_FOUND)
+     IF(NOT PYQT5_FIND_QUIETLY)
+diff --git a/cmake/modules/FindPythonLibrary.cmake b/cmake/modules/FindPythonLibrary.cmake
+index 0000000000..0000000000 100644
+--- a/cmake/modules/FindPythonLibrary.cmake
++++ b/cmake/modules/FindPythonLibrary.cmake
+@@ -31,6 +31,74 @@ endif(APPLE)
+ 
+ include(FindPackageHandleStandardArgs)
+ 
++if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++    set(KRITA_ANDROID_PYTHON_VERSION "3.14" CACHE STRING "Android target Python version used by Krita PyKrita")
++
++    find_package(Python 3.8 REQUIRED COMPONENTS Interpreter)
++
++    if(NOT KRITA_ANDROID_PYTHON_PREFIX)
++        if(CMAKE_PREFIX_PATH)
++            list(GET CMAKE_PREFIX_PATH 0 _krita_android_python_prefix)
++        else()
++            set(_krita_android_python_prefix "${CMAKE_INSTALL_PREFIX}")
++        endif()
++
++        set(KRITA_ANDROID_PYTHON_PREFIX
++            "${_krita_android_python_prefix}"
++            CACHE PATH "Android dependency prefix containing target Python")
++    endif()
++
++    set(_krita_android_python_include
++        "${KRITA_ANDROID_PYTHON_PREFIX}/include/python${KRITA_ANDROID_PYTHON_VERSION}")
++    set(_krita_android_python_library
++        "${KRITA_ANDROID_PYTHON_PREFIX}/lib/libpython${KRITA_ANDROID_PYTHON_VERSION}.so")
++    set(_krita_android_target_site_packages
++        "${KRITA_ANDROID_PYTHON_PREFIX}/lib/python${KRITA_ANDROID_PYTHON_VERSION}/site-packages")
++
++    if(NOT EXISTS "${_krita_android_python_include}/Python.h")
++        message(FATAL_ERROR "Android target Python.h was not found in ${_krita_android_python_include}")
++    endif()
++
++    if(NOT EXISTS "${_krita_android_python_library}")
++        message(FATAL_ERROR "Android target Python library was not found at ${_krita_android_python_library}")
++    endif()
++
++    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
++    set(PYTHON_SHORT_VERSION "${KRITA_ANDROID_PYTHON_VERSION}")
++    set(PYTHON_LONG_VERSION "${KRITA_ANDROID_PYTHON_VERSION}")
++    set(PYTHON_INCLUDE_DIRS "${_krita_android_python_include}")
++    set(PYTHON_INCLUDE_PATH "${_krita_android_python_include}")
++    set(PYTHON_LIBRARY "${_krita_android_python_library}")
++    set(PYTHON_LIBRARIES "${_krita_android_python_library}")
++    set(PYTHON_SITE_PACKAGES_DIR "${_krita_android_target_site_packages}")
++    set(Python_Development_FOUND TRUE)
++    set(Python_INCLUDE_DIRS "${_krita_android_python_include}")
++    set(Python_LIBRARIES "${_krita_android_python_library}")
++
++    if (NOT CMAKE_PREFIX_PATH)
++        set(_all_prefix_paths ${KRITA_ANDROID_PYTHON_PREFIX})
++    else()
++        set(_all_prefix_paths ${CMAKE_PREFIX_PATH})
++    endif()
++
++    unset(KRITA_PYTHONPATH_V4 CACHE)
++    unset(KRITA_PYTHONPATH_V5 CACHE)
++
++    cmake_path(CONVERT "${_all_prefix_paths}" TO_CMAKE_PATH_LIST _python_prefix_path_v4 NORMALIZE)
++    list(REMOVE_ITEM _python_prefix_path_v4 "")
++    list(TRANSFORM _python_prefix_path_v4 APPEND "/lib/krita-python-libs")
++    cmake_path(CONVERT "${_python_prefix_path_v4}" TO_NATIVE_PATH_LIST KRITA_PYTHONPATH_V4 NORMALIZE)
++
++    set(_python_prefix_path_v5 "${_krita_android_target_site_packages}")
++    list(APPEND _python_prefix_path_v5 "${KRITA_ANDROID_PYTHON_PREFIX}/lib/python${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}/site-packages")
++    cmake_path(CONVERT "${_python_prefix_path_v5}" TO_NATIVE_PATH_LIST KRITA_PYTHONPATH_V5 NORMALIZE)
++
++    message(STATUS "Android target Python include directory: ${PYTHON_INCLUDE_DIRS}")
++    message(STATUS "Android target Python library: ${PYTHON_LIBRARY}")
++    message(STATUS "Android target Python site-packages directory: ${PYTHON_SITE_PACKAGES_DIR}")
++    message(STATUS "Krita site-packages directories for SIP v5+: ${KRITA_PYTHONPATH_V5}")
++else()
++
+ if (WIN32 OR APPLE)
+     set(Python_FIND_STRATEGY LOCATION)
+     # on APPLE we search python using Python_ROOT_DIR set by the toolchain file
+@@ -89,6 +157,8 @@ if (Python_Interpreter_FOUND)
+     message(STATUS "Krita site-packages directories for SIP v4: ${KRITA_PYTHONPATH_V4}")
+     message(STATUS "Krita site-packages directories for SIP v5+: ${KRITA_PYTHONPATH_V5}")
+ endif()
++
++endif()
+ 
+ find_package_handle_standard_args(PythonLibrary DEFAULT_MSG PYTHON_LIBRARY PYTHON_INCLUDE_DIRS PYTHON_INCLUDE_PATH)
+ 
+diff --git a/cmake/modules/FindSIP.cmake b/cmake/modules/FindSIP.cmake
+index 0000000000..0000000000 100644
+--- a/cmake/modules/FindSIP.cmake
++++ b/cmake/modules/FindSIP.cmake
+@@ -33,6 +33,31 @@ ELSE(SIP_VERSION)
+ 
+   FIND_FILE(_find_sip_py FindSIP.py PATHS ${CMAKE_MODULE_PATH})
+ 
++  if(ANDROID AND ENABLE_ANDROID_PYKRITA_EXPERIMENTAL)
++    set(KRITA_ANDROID_SIP_VERSION "060a00" CACHE STRING "Android host SIP version encoded as a hex string")
++    set(KRITA_ANDROID_SIP_VERSION_STR "6.10.0" CACHE STRING "Android host SIP version string")
++
++    if(NOT SIP_EXECUTABLE)
++      if(KRITA_ANDROID_PYTHON_PREFIX)
++        find_program(SIP_EXECUTABLE sip-build
++          HINTS "${KRITA_ANDROID_PYTHON_PREFIX}/bin"
++          NO_DEFAULT_PATH)
++      endif()
++
++      if(NOT SIP_EXECUTABLE)
++        find_program(SIP_EXECUTABLE sip-build)
++      endif()
++    endif()
++
++    if(NOT SIP_EXECUTABLE OR NOT EXISTS "${SIP_EXECUTABLE}")
++      message(FATAL_ERROR "sip-build was not found for Android PyKrita generation")
++    endif()
++
++    set(SIP_VERSION ${KRITA_ANDROID_SIP_VERSION})
++    set(SIP_VERSION_STR ${KRITA_ANDROID_SIP_VERSION_STR})
++    set(SIP_FOUND TRUE)
++  else()
++
+   # TODO: we don't use cmake_path(CONVERT TO_NATIVE_PATH_LIST) here, because
+   #       it is unknown if it is going to work on Windows. Currently, our paths
+   #       on Windows use '/' as well. We need to test if switching them into '\'
+@@ -75,6 +100,8 @@ ELSE(SIP_VERSION)
+       MESSAGE(STATUS "Found SIP configuration but the sip executable could not be found.")
+     ENDIF()
+   ENDIF(sip_config)
++
++  endif()
+ 
+   IF(SIP_FOUND)
+     IF(NOT SIP_FIND_QUIETLY)
+-- 
+2.45.0

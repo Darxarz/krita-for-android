@@ -31,3 +31,27 @@ jobs:
       - name: Show patched diff summary
         run: |
           git -C upstream/krita-deps-management diff --stat
+
+  krita:
+    name: Apply Krita patches
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout port lab
+        uses: actions/checkout@v4
+
+      - name: Clone Krita
+        run: |
+          git clone --depth 1 --filter=blob:none https://invent.kde.org/graphics/krita.git upstream/krita
+
+      - name: Apply patches
+        run: |
+          for patch in patches/krita/*.patch; do
+            echo "Checking $patch"
+            git -C upstream/krita apply --check "$GITHUB_WORKSPACE/$patch"
+            git -C upstream/krita apply "$GITHUB_WORKSPACE/$patch"
+          done
+
+      - name: Show patched diff summary
+        run: |
+          git -C upstream/krita diff --stat
