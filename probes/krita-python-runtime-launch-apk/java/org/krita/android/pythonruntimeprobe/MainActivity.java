@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v21";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v22";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -111,7 +111,7 @@ public final class MainActivity extends Activity {
             }
         }));
 
-        root.addView(makeButton("2. Copy Python payload", new Task() {
+        root.addView(makeButton("2. Copy runtime payload", new Task() {
             @Override
             public void run() throws IOException {
                 copyPayloadIfNeeded(false);
@@ -359,8 +359,7 @@ public final class MainActivity extends Activity {
                 "assets krita_probe_qcoreapplication.py");
         appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qcoreapplication_import.py"),
                 "assets krita_probe_qcoreapplication_import.py");
-        appendFileLine(report, new File(runtimeRoot(), "assets/qt/plugins/platforms/"
-                + "libplugins_platforms_qtforandroid_" + primaryAbi() + ".so"),
+        appendFileLine(report, qtAndroidPlatformPlugin(),
                 "assets Qt Android platform plugin");
 
         report.append("\nDirectory libkrita entries:\n");
@@ -545,29 +544,31 @@ public final class MainActivity extends Activity {
 
     private void copyPayloadIfNeeded(boolean force) throws IOException {
         File runtimeRoot = runtimeRoot();
-        File pythonAssetsRoot = pythonAssetsRoot();
         File sentinel = payloadSentinel();
+        File qtPlatformPlugin = qtAndroidPlatformPlugin();
 
-        if (force || !sentinel.isFile()) {
+        if (force || !sentinel.isFile() || !qtPlatformPlugin.isFile()) {
             showStep("Preparing private runtime directory...");
             deleteTree(runtimeRoot);
 
             lastProgressUpdateMs = 0;
-            showStep("Copying Python payload from APK assets. This is the heavy step.");
-            copyAssetTree(getAssets(), "python", pythonAssetsRoot, new CopyStats());
+            CopyStats stats = new CopyStats();
+            showStep("Copying runtime payload from APK assets. This is the heavy step.");
+            copyAssetTree(getAssets(), "python", pythonAssetsRoot(), stats);
+            copyAssetTree(getAssets(), "qt", qtAssetsRoot(), stats);
             if (!sentinel.createNewFile()) {
                 throw new IOException("Could not write payload sentinel");
             }
-            showStep("Python payload copied.");
+            showStep("Runtime payload copied.");
             return;
         }
 
-        showStep("Python payload already copied. Reusing app-private storage.");
+        showStep("Runtime payload already copied. Reusing app-private storage.");
     }
 
     private void requirePayload() throws IOException {
-        if (!payloadSentinel().isFile()) {
-            throw new IOException("Python payload is not copied yet. Press 'Copy Python payload' first.");
+        if (!payloadSentinel().isFile() || !qtAndroidPlatformPlugin().isFile()) {
+            throw new IOException("Runtime payload is not copied yet. Press 'Copy runtime payload' first.");
         }
     }
 
@@ -579,8 +580,17 @@ public final class MainActivity extends Activity {
         return new File(runtimeRoot(), "assets/python");
     }
 
+    private File qtAssetsRoot() {
+        return new File(runtimeRoot(), "assets/qt");
+    }
+
+    private File qtAndroidPlatformPlugin() {
+        return new File(qtAssetsRoot(), "plugins/platforms/libplugins_platforms_qtforandroid_"
+                + primaryAbi() + ".so");
+    }
+
     private File payloadSentinel() {
-        return new File(pythonAssetsRoot(), ".payload_complete");
+        return new File(runtimeRoot(), ".payload_complete");
     }
 
     private void showStep(String message) {
@@ -651,7 +661,7 @@ public final class MainActivity extends Activity {
         }
 
         lastProgressUpdateMs = now;
-        showStep("Copying Python payload...\nfiles=" + stats.files
+        showStep("Copying runtime payload...\nfiles=" + stats.files
                 + "\nbytes=" + stats.bytes
                 + "\ncurrent=" + assetPath);
     }

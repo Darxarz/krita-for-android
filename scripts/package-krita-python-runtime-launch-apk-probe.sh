@@ -112,8 +112,8 @@ cp "$dex_dir/classes.dex" "$work_dir/classes.dex"
 cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.krita.android.pythonruntimeprobe"
-    android:versionCode="21"
-    android:versionName="0.21">
+    android:versionCode="22"
+    android:versionName="0.22">
     <uses-sdk
         android:minSdkVersion="24"
         android:targetSdkVersion="35" />
@@ -121,13 +121,13 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:extractNativeLibs="true"
         android:icon="@drawable/ic_krita_probe"
         android:roundIcon="@drawable/ic_krita_probe"
-        android:label="Krita Probe Manual v21"
+        android:label="Krita Probe Manual v22"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:icon="@drawable/ic_krita_probe"
-            android:label="Krita Probe Manual v21">
+            android:label="Krita Probe Manual v22">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -137,10 +137,10 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 </manifest>
 EOF
 
-unsigned_base_apk="$output_dir/krita-probe-manual-v21-${abi}-base.apk"
-unsigned_apk="$output_dir/krita-probe-manual-v21-${abi}-unsigned.apk"
-aligned_apk="$output_dir/krita-probe-manual-v21-${abi}-aligned.apk"
-signed_apk="$output_dir/krita-probe-manual-v21-${abi}.apk"
+unsigned_base_apk="$output_dir/krita-probe-manual-v22-${abi}-base.apk"
+unsigned_apk="$output_dir/krita-probe-manual-v22-${abi}-unsigned.apk"
+aligned_apk="$output_dir/krita-probe-manual-v22-${abi}-aligned.apk"
+signed_apk="$output_dir/krita-probe-manual-v22-${abi}.apk"
 keystore="$output_dir/debug.keystore"
 
 "$build_tools_dir/aapt2" compile \
@@ -182,8 +182,8 @@ keytool -genkeypair \
 "$build_tools_dir/apksigner" verify --verbose --print-certs "$signed_apk"
 
 "$build_tools_dir/aapt2" dump badging "$signed_apk" | tee "$output_dir/apk-badging.txt"
-grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='21' versionName='0.21'" "$output_dir/apk-badging.txt"
-grep -Fq "application: label='Krita Probe Manual v21'" "$output_dir/apk-badging.txt"
+grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='22' versionName='0.22'" "$output_dir/apk-badging.txt"
+grep -Fq "application: label='Krita Probe Manual v22'" "$output_dir/apk-badging.txt"
 grep -Eq "^application:.*icon='[^']+'" "$output_dir/apk-badging.txt"
 grep -Fq "launchable-activity: name='org.krita.android.pythonruntimeprobe.MainActivity'" "$output_dir/apk-badging.txt"
 grep -Eq "^launchable-activity:.*icon='[^']+'" "$output_dir/apk-badging.txt"

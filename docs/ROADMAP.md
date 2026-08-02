@@ -536,6 +536,12 @@ stdout/stderr в persistent log и добавляет `QCoreApplication` probes.
 лог отличит отсутствующий GUI platform plugin от требования полного
 `KisApplication` startup.
 
+Перед планшетной установкой v21 был найден ещё один packaging-to-runtime gap:
+APK содержал `assets/qt`, но Java copier переносил в app-private directory только
+`assets/python`. `Krita Probe Manual v22` копирует обе директории, проверяет
+platform plugin before reuse и хранит sentinel в runtime root, поэтому старый
+Python-only payload автоматически заменяется полным runtime payload.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 
