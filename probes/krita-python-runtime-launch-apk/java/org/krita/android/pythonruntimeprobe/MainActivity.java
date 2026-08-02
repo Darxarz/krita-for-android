@@ -26,7 +26,7 @@ import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private static final String TAG = "KritaPyRuntimeProbe";
-    private static final String SCREEN_TITLE = "Krita Probe Manual v20";
+    private static final String SCREEN_TITLE = "Krita Probe Manual v21";
 
     private static native String runInitProbe(String runtimeRoot);
     private static native String runImportProbe(String runtimeRoot);
@@ -149,6 +149,8 @@ public final class MainActivity extends Activity {
         root.addView(makeChildImportOneButton("4d1. Child safe krita bootstrap", "krita_probe_safe_import"));
         root.addView(makeChildImportOneButton("4d2. Child create QApplication", "krita_probe_qapplication"));
         root.addView(makeChildImportOneButton("4d3. Child QApplication then krita", "krita_probe_qapplication_import"));
+        root.addView(makeChildImportOneButton("4d4. Child create QCoreApplication", "krita_probe_qcoreapplication"));
+        root.addView(makeChildImportOneButton("4d5. Child QCoreApplication then krita", "krita_probe_qcoreapplication_import"));
         root.addView(makeImportOneButton("4dZ. Import krita crash test", "krita"));
 
         root.addView(makeButton("4z. Import all Python modules crash test", new Task() {
@@ -353,6 +355,13 @@ public final class MainActivity extends Activity {
                 "assets krita_probe_qapplication.py");
         appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qapplication_import.py"),
                 "assets krita_probe_qapplication_import.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qcoreapplication.py"),
+                "assets krita_probe_qcoreapplication.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/python/krita-python-libs/krita_probe_qcoreapplication_import.py"),
+                "assets krita_probe_qcoreapplication_import.py");
+        appendFileLine(report, new File(runtimeRoot(), "assets/qt/plugins/platforms/"
+                + "libplugins_platforms_qtforandroid_" + primaryAbi() + ".so"),
+                "assets Qt Android platform plugin");
 
         report.append("\nDirectory libkrita entries:\n");
         File[] files = nativeDir.listFiles();

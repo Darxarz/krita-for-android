@@ -527,6 +527,15 @@ Python 3.14, `pykrita` helper и безопасное исполнение ре�
 `QApplication` плюс `import krita`. Это отделяет недостающий Qt application context
 от необходимости полного `KisApplication` startup с ресурсами и plugin loading.
 
+Планшетный тест v20 подтвердил Python/PyQt loading, но `QApplication` завершился в
+child process с `SIGABRT` после загрузки `QtGui` и `QtWidgets`. Проверка полного
+PyQt prefix показала, что `libplugins_platforms_qtforandroid_<abi>.so` существует,
+но v20 не включал его в payload. Следующий слой `Krita Probe Manual v21` включает
+Android Qt platform plugin, передаёт Qt его точный directory, сохраняет child
+stdout/stderr в persistent log и добавляет `QCoreApplication` probes. Так следующий
+лог отличит отсутствующий GUI platform plugin от требования полного
+`KisApplication` startup.
+
 Критерий готовности: простой test plugin печатает версию Python в logcat и видит `krita`
 module.
 

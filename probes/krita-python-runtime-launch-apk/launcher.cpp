@@ -444,6 +444,12 @@ std::string runChildProbe(ChildProbeMode mode, const std::string &runtimeRoot, c
     if (pid == 0) {
         close(pipeFds[0]);
         installChildCrashHandlers(pipeFds[1]);
+        if (dup2(pipeFds[1], STDOUT_FILENO) >= 0) {
+            setvbuf(stdout, nullptr, _IONBF, 0);
+        }
+        if (dup2(pipeFds[1], STDERR_FILENO) >= 0) {
+            setvbuf(stderr, nullptr, _IONBF, 0);
+        }
 
         if (mode == ChildProbeMode::DlopenPyKrita) {
             writeAll(pipeFds[1], "preflight:\n" + describeFile(pyKritaExtensionPath(runtimeRoot)) + "\n");

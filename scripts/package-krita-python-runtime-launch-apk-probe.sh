@@ -24,10 +24,13 @@ pykrita_stub="$repo_root/probes/krita-python-runtime-payload/pykrita.py"
 safe_import_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_safe_import.py"
 qapplication_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_qapplication.py"
 qapplication_import_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_qapplication_import.py"
+qcoreapplication_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_qcoreapplication.py"
+qcoreapplication_import_probe="$repo_root/probes/krita-python-runtime-payload/krita_probe_qcoreapplication_import.py"
 probe_icon="$repo_root/probes/krita-python-runtime-launch-apk/res/drawable/ic_krita_probe.xml"
 
 test -d "$payload_dir/jniLibs/$abi"
 test -d "$payload_dir/assets/python"
+test -f "$payload_dir/assets/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so"
 test -f "$init_probe_so"
 test -f "$launcher_so"
 test -f "$cxx_shared_so"
@@ -35,6 +38,8 @@ test -f "$pykrita_stub"
 test -f "$safe_import_probe"
 test -f "$qapplication_probe"
 test -f "$qapplication_import_probe"
+test -f "$qcoreapplication_probe"
+test -f "$qcoreapplication_import_probe"
 test -f "$probe_icon"
 test -f "$java_source_dir/org/krita/android/pythonruntimeprobe/MainActivity.java"
 test -f "$android_jar"
@@ -56,10 +61,13 @@ compiled_res_dir="$work_dir/compiled-res"
 mkdir -p "$assets_dir" "$native_lib_dir" "$classes_dir" "$dex_dir" "$res_dir" "$compiled_res_dir"
 
 cp -a "$payload_dir/assets/python" "$assets_dir/"
+cp -a "$payload_dir/assets/qt" "$assets_dir/"
 cp -a "$pykrita_stub" "$assets_dir/python/krita-python-libs/pykrita.py"
 cp -a "$safe_import_probe" "$assets_dir/python/krita-python-libs/krita_probe_safe_import.py"
 cp -a "$qapplication_probe" "$assets_dir/python/krita-python-libs/krita_probe_qapplication.py"
 cp -a "$qapplication_import_probe" "$assets_dir/python/krita-python-libs/krita_probe_qapplication_import.py"
+cp -a "$qcoreapplication_probe" "$assets_dir/python/krita-python-libs/krita_probe_qcoreapplication.py"
+cp -a "$qcoreapplication_import_probe" "$assets_dir/python/krita-python-libs/krita_probe_qcoreapplication_import.py"
 cp -a "$repo_root/probes/krita-python-runtime-launch-apk/res/." "$res_dir/"
 find "$payload_dir/jniLibs/$abi" -maxdepth 1 -type f \( -name "*.so" -o -name "*.so.*" \) \
     -exec cp -a {} "$native_lib_dir/" \;
@@ -73,6 +81,9 @@ test -f "$assets_dir/python/krita-python-libs/pykrita.py"
 test -f "$assets_dir/python/krita-python-libs/krita_probe_safe_import.py"
 test -f "$assets_dir/python/krita-python-libs/krita_probe_qapplication.py"
 test -f "$assets_dir/python/krita-python-libs/krita_probe_qapplication_import.py"
+test -f "$assets_dir/python/krita-python-libs/krita_probe_qcoreapplication.py"
+test -f "$assets_dir/python/krita-python-libs/krita_probe_qcoreapplication_import.py"
+test -f "$assets_dir/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so"
 test -f "$native_lib_dir/libpython3.14.so"
 test -f "$native_lib_dir/libkritalibbrush.so"
 test -f "$native_lib_dir/libkritaimage.so"
@@ -101,8 +112,8 @@ cp "$dex_dir/classes.dex" "$work_dir/classes.dex"
 cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.krita.android.pythonruntimeprobe"
-    android:versionCode="20"
-    android:versionName="0.20">
+    android:versionCode="21"
+    android:versionName="0.21">
     <uses-sdk
         android:minSdkVersion="24"
         android:targetSdkVersion="35" />
@@ -110,13 +121,13 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
         android:extractNativeLibs="true"
         android:icon="@drawable/ic_krita_probe"
         android:roundIcon="@drawable/ic_krita_probe"
-        android:label="Krita Probe Manual v20"
+        android:label="Krita Probe Manual v21"
         android:theme="@android:style/Theme.Material.Light">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:icon="@drawable/ic_krita_probe"
-            android:label="Krita Probe Manual v20">
+            android:label="Krita Probe Manual v21">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -126,10 +137,10 @@ cat > "$work_dir/AndroidManifest.xml" <<'EOF'
 </manifest>
 EOF
 
-unsigned_base_apk="$output_dir/krita-probe-manual-v20-${abi}-base.apk"
-unsigned_apk="$output_dir/krita-probe-manual-v20-${abi}-unsigned.apk"
-aligned_apk="$output_dir/krita-probe-manual-v20-${abi}-aligned.apk"
-signed_apk="$output_dir/krita-probe-manual-v20-${abi}.apk"
+unsigned_base_apk="$output_dir/krita-probe-manual-v21-${abi}-base.apk"
+unsigned_apk="$output_dir/krita-probe-manual-v21-${abi}-unsigned.apk"
+aligned_apk="$output_dir/krita-probe-manual-v21-${abi}-aligned.apk"
+signed_apk="$output_dir/krita-probe-manual-v21-${abi}.apk"
 keystore="$output_dir/debug.keystore"
 
 "$build_tools_dir/aapt2" compile \
@@ -171,8 +182,8 @@ keytool -genkeypair \
 "$build_tools_dir/apksigner" verify --verbose --print-certs "$signed_apk"
 
 "$build_tools_dir/aapt2" dump badging "$signed_apk" | tee "$output_dir/apk-badging.txt"
-grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='20' versionName='0.20'" "$output_dir/apk-badging.txt"
-grep -Fq "application: label='Krita Probe Manual v20'" "$output_dir/apk-badging.txt"
+grep -Fq "package: name='org.krita.android.pythonruntimeprobe' versionCode='21' versionName='0.21'" "$output_dir/apk-badging.txt"
+grep -Fq "application: label='Krita Probe Manual v21'" "$output_dir/apk-badging.txt"
 grep -Eq "^application:.*icon='[^']+'" "$output_dir/apk-badging.txt"
 grep -Fq "launchable-activity: name='org.krita.android.pythonruntimeprobe.MainActivity'" "$output_dir/apk-badging.txt"
 grep -Eq "^launchable-activity:.*icon='[^']+'" "$output_dir/apk-badging.txt"
@@ -192,6 +203,9 @@ require_entry "assets/python/krita-python-libs/pykrita.py"
 require_entry "assets/python/krita-python-libs/krita_probe_safe_import.py"
 require_entry "assets/python/krita-python-libs/krita_probe_qapplication.py"
 require_entry "assets/python/krita-python-libs/krita_probe_qapplication_import.py"
+require_entry "assets/python/krita-python-libs/krita_probe_qcoreapplication.py"
+require_entry "assets/python/krita-python-libs/krita_probe_qcoreapplication_import.py"
+require_entry "assets/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so"
 require_entry "lib/$abi/libpython3.14.so"
 require_entry "lib/$abi/libkritalibbrush.so"
 require_entry "lib/$abi/libkritaimage.so"
@@ -231,9 +245,12 @@ check_machine "lib/$abi/libkrita_python_runtime_init_probe.so"
 check_machine "lib/$abi/libkrita_python_runtime_launcher.so"
 check_machine "lib/$abi/libc++_shared.so"
 check_machine "assets/python/krita-python-libs/PyKrita/krita.so"
+check_machine "assets/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so"
 check_dynamic_needed "lib/$abi/libkrita_python_runtime_init_probe.so" "libc++_shared.so"
 check_dynamic_needed "lib/$abi/libkrita_python_runtime_launcher.so" "libkrita_python_runtime_init_probe.so"
 check_dynamic_needed "lib/$abi/libkrita_python_runtime_launcher.so" "libc++_shared.so"
+check_dynamic_needed "assets/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so" "libQt5Gui_${abi}.so"
+check_dynamic_needed "assets/qt/plugins/platforms/libplugins_platforms_qtforandroid_${abi}.so" "libQt5Core_${abi}.so"
 
 {
     echo "Krita Android Python runtime launch APK probe"
